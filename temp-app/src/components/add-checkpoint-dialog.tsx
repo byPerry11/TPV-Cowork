@@ -42,7 +42,7 @@ export function AddCheckpointDialog({ projectId, onSuccess }: AddCheckpointDialo
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const form = useForm<z.infer<typeof checkpointSchema>>({
+  const form = useForm({
     resolver: zodResolver(checkpointSchema),
     defaultValues: {
       title: "",
@@ -117,7 +117,7 @@ export function AddCheckpointDialog({ projectId, onSuccess }: AddCheckpointDialo
                 <FormItem>
                   <FormLabel>Order</FormLabel>
                   <FormControl>
-                    <Input type="number" min={1} {...field} />
+                    <Input type="number" min={1} {...field} value={field.value as string | number} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
