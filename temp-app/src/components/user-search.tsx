@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command"
 
 interface Profile {
@@ -108,7 +108,7 @@ export function UserSearch() {
     return (
         <div className="relative w-full max-w-sm">
             <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
+                <PopoverAnchor asChild>
                     <div className="relative">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input 
@@ -119,8 +119,12 @@ export function UserSearch() {
                             onFocus={() => setOpen(true)}
                         />
                     </div>
-                </PopoverTrigger>
-                <PopoverContent className="p-0" align="start">
+                </PopoverAnchor>
+                <PopoverContent 
+                    className="p-0" 
+                    align="start" 
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                >
                     <Command>
                         <CommandList>
                             {loading && <CommandItem disabled>Searching...</CommandItem>}
@@ -129,7 +133,7 @@ export function UserSearch() {
                             )}
                             {results.length > 0 && (
                                 <CommandGroup heading="Users">
-                                    {results.map((user) => (
+                                     {results.map((user) => (
                                         <div key={user.id} className="flex items-center justify-between p-2 hover:bg-accent rounded-sm">
                                             <div className="flex items-center gap-2">
                                                 <Avatar className="h-8 w-8">
