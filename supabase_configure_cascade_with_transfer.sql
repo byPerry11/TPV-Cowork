@@ -1,11 +1,5 @@
--- Automatic Project Ownership Transfer on User Deletion
--- This script creates a trigger that transfers project ownership to another member
--- when the owner's account is deleted, preventing project loss.
-
--- Strategy:
--- 1. Find the next best member (priority: admin > manager > member)
--- 2. Transfer ownership to that member
--- 3. If no members exist, set owner_id to NULL (orphaned project)
+-- Automatic Project Ownership Transfer on User Deletion (FIXED VERSION)
+-- This version only configures tables that exist in your database
 
 -- First, create a function to handle the transfer
 CREATE OR REPLACE FUNCTION transfer_project_ownership()
@@ -19,7 +13,7 @@ BEGIN
         SELECT id FROM projects WHERE owner_id = OLD.id
     LOOP
         -- Find the next best member to inherit the project
-        -- Priority: active admin > active manager > active member > pending admin/manager
+        -- Priority: active admin > active manager > active member
         SELECT user_id INTO new_owner_id
         FROM project_members
         WHERE project_id = project_record.id
@@ -37,7 +31,6 @@ BEGIN
 
         -- If we found a suitable member, transfer ownership
         IF new_owner_id IS NOT NULL THEN
-            -- Update project owner
             UPDATE projects 
             SET owner_id = new_owner_id 
             WHERE id = project_record.id;
@@ -51,7 +44,6 @@ BEGIN
             RAISE NOTICE 'Project % transferred to user %', project_record.id, new_owner_id;
         ELSE
             -- No suitable member found, set owner to NULL (orphaned project)
-            -- You could also DELETE the project here if preferred
             UPDATE projects 
             SET owner_id = NULL 
             WHERE id = project_record.id;
@@ -65,7 +57,6 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create the trigger on auth.users
--- This runs BEFORE the user is deleted, so we can still access their data
 DROP TRIGGER IF EXISTS transfer_projects_before_user_delete ON auth.users;
 
 CREATE TRIGGER transfer_projects_before_user_delete
@@ -73,21 +64,18 @@ CREATE TRIGGER transfer_projects_before_user_delete
     FOR EACH ROW
     EXECUTE FUNCTION transfer_project_ownership();
 
--- Now configure CASCADE with the transfer logic in place
--- When user is deleted, their memberships and personal data cascade
--- But projects are transferred first (via trigger above)
+-- Configure CASCADE constraints
 
--- Projects: Now can be NULL if orphaned
+-- 1. Projects: Set to NULL (trigger handles transfer)
 ALTER TABLE projects 
   DROP CONSTRAINT IF EXISTS projects_owner_id_fkey;
-
 ALTER TABLE projects 
   ADD CONSTRAINT projects_owner_id_fkey 
   FOREIGN KEY (owner_id) 
   REFERENCES auth.users(id) 
-  ON DELETE SET NULL;  -- Set to NULL instead of CASCADE (trigger handles transfer)
+  ON DELETE SET NULL;
 
--- All other tables use CASCADE as before
+-- 2. Profiles: CASCADE
 ALTER TABLE profiles 
   DROP CONSTRAINT IF EXISTS profiles_id_fkey;
 ALTER TABLE profiles 
@@ -96,6 +84,7 @@ ALTER TABLE profiles
   REFERENCES auth.users(id) 
   ON DELETE CASCADE;
 
+-- 3. Project Members: CASCADE on user deletion
 ALTER TABLE project_members 
   DROP CONSTRAINT IF EXISTS project_members_user_id_fkey;
 ALTER TABLE project_members 
@@ -104,6 +93,7 @@ ALTER TABLE project_members
   REFERENCES auth.users(id) 
   ON DELETE CASCADE;
 
+-- 4. Project Members: CASCADE on project deletion
 ALTER TABLE project_members 
   DROP CONSTRAINT IF EXISTS project_members_project_id_fkey;
 ALTER TABLE project_members 
@@ -112,6 +102,7 @@ ALTER TABLE project_members
   REFERENCES projects(id) 
   ON DELETE CASCADE;
 
+-- 5. Checkpoints: CASCADE on project deletion
 ALTER TABLE checkpoints 
   DROP CONSTRAINT IF EXISTS checkpoints_project_id_fkey;
 ALTER TABLE checkpoints 
@@ -120,6 +111,7 @@ ALTER TABLE checkpoints
   REFERENCES projects(id) 
   ON DELETE CASCADE;
 
+-- 6. Evidences: CASCADE on user deletion
 ALTER TABLE evidences 
   DROP CONSTRAINT IF EXISTS evidences_user_id_fkey;
 ALTER TABLE evidences 
@@ -128,6 +120,7 @@ ALTER TABLE evidences
   REFERENCES auth.users(id) 
   ON DELETE CASCADE;
 
+-- 7. Evidences: CASCADE on checkpoint deletion
 ALTER TABLE evidences 
   DROP CONSTRAINT IF EXISTS evidences_checkpoint_id_fkey;
 ALTER TABLE evidences 
@@ -136,6 +129,7 @@ ALTER TABLE evidences
   REFERENCES checkpoints(id) 
   ON DELETE CASCADE;
 
+-- 8. Friend Requests: CASCADE on sender deletion
 ALTER TABLE friend_requests 
   DROP CONSTRAINT IF EXISTS friend_requests_sender_id_fkey;
 ALTER TABLE friend_requests 
@@ -144,6 +138,7 @@ ALTER TABLE friend_requests
   REFERENCES auth.users(id) 
   ON DELETE CASCADE;
 
+-- 9. Friend Requests: CASCADE on receiver deletion
 ALTER TABLE friend_requests 
   DROP CONSTRAINT IF EXISTS friend_requests_receiver_id_fkey;
 ALTER TABLE friend_requests 
@@ -152,24 +147,7 @@ ALTER TABLE friend_requests
   REFERENCES auth.users(id) 
   ON DELETE CASCADE;
 
-ALTER TABLE friendships 
-  DROP CONSTRAINT IF EXISTS friendships_user_id_fkey;
-ALTER TABLE friendships 
-  ADD CONSTRAINT friendships_user_id_fkey 
-  FOREIGN KEY (user_id) 
-  REFERENCES auth.users(id) 
-  ON DELETE CASCADE;
-
-ALTER TABLE friendships 
-  DROP CONSTRAINT IF EXISTS friendships_friend_id_fkey;
-ALTER TABLE friendships 
-  ADD CONSTRAINT friendships_friend_id_fkey 
-  FOREIGN KEY (friend_id) 
-  REFERENCES auth.users(id) 
-  ON DELETE CASCADE;
-
 -- Summary:
--- When a user is deleted:
--- 1. Trigger transfers their projects to next best member (admin > manager > member)
--- 2. If no members, project becomes orphaned (owner_id = NULL)
--- 3. All their memberships, friend requests, evidences cascade delete normally
+-- ✅ Project ownership transfers automatically to next admin/manager/member
+-- ✅ All user-related data cascades on deletion
+-- ✅ No "friendships" table references (doesn't exist in your DB)
