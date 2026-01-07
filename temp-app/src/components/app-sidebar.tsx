@@ -14,6 +14,7 @@ import { useSidebar } from "@/contexts/sidebar-context"
 interface UserProfile {
   email: string | undefined
   username: string | null
+  displayName: string | null
   avatar_url: string | null
 }
 
@@ -27,10 +28,11 @@ export function AppSidebar() {
     const getProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data } = await supabase.from('profiles').select('username, avatar_url').eq('id', user.id).single()
+        const { data } = await supabase.from('profiles').select('username, display_name, avatar_url').eq('id', user.id).single()
         setProfile({
           email: user.email,
           username: data?.username || user.email?.split('@')[0] || "User",
+          displayName: data?.display_name || null,
           avatar_url: data?.avatar_url || null
         })
       }
@@ -127,9 +129,9 @@ export function AppSidebar() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium">{profile?.username}</span>
-                  <span className="text-xs text-muted-foreground truncate max-w-[100px]" title={profile?.email}>
-                    {profile?.email}
+                  <span className="text-sm font-medium">{profile?.displayName || profile?.username}</span>
+                  <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                    @{profile?.username}
                   </span>
                 </div>
               </div>

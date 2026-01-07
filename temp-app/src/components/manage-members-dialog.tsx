@@ -301,7 +301,8 @@ export function ManageMembersDialog({ projectId }: ManageMembersDialogProps) {
                                                 <User className="h-4 w-4 text-primary" />
                                             </div>
                                             <div>
-                                                <p className="text-sm font-medium leading-none">{member.profiles?.username}</p>
+                                                <p className="text-sm font-medium leading-none">{member.profiles?.display_name || member.profiles?.username}</p>
+                                                <p className="text-xs text-muted-foreground">@{member.profiles?.username}</p>
                                                 <p className="text-xs text-muted-foreground capitalize flex items-center gap-1 mt-1">
                                                     <Shield className="h-3 w-3" />
                                                     {member.role}

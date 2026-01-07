@@ -1,25 +1,128 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { Checkpoint } from "@/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, Circle, Camera } from "lucide-react"
+import { CheckCircle2, Circle, Camera, GripVertical } from "lucide-react"
 import { EvidenceForm } from "@/components/evidence-form"
 import { EvidenceViewer } from "@/components/evidence-viewer"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import {
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface CheckpointListProps {
   projectId: string
 }
 
+interface SortableCheckpointItemProps {
+  checkpoint: Checkpoint
+  onSelect: (checkpoint: Checkpoint) => void
+}
+
+function SortableCheckpointItem({ checkpoint, onSelect }: SortableCheckpointItemProps) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+    } = useSortable({ id: checkpoint.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className="mb-4">
+             <Card className={`${checkpoint.is_completed ? 'opacity-80' : ''}`}>
+                <CardHeader className="flex flex-row items-center space-x-4 p-4 pb-2">
+                    {/* Drag Handle */}
+                    <div {...attributes} {...listeners} className="cursor-grab hover:text-primary touch-none">
+                        <GripVertical className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    
+                    <div className="flex-1 flex items-center justify-between">
+                        <CardTitle className="text-base font-medium">
+                            {checkpoint.title}
+                        </CardTitle>
+                        {checkpoint.is_completed ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        ) : (
+                            <Circle className="h-5 w-5 text-gray-300" />
+                        )}
+                    </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 pl-14">
+                    <div className="flex justify-end pt-2">
+                         <Sheet>
+                            <SheetTrigger asChild>
+                                <Button 
+                                    variant={checkpoint.is_completed ? "outline" : "default"} 
+                                    size="sm"
+                                    onClick={() => onSelect(checkpoint)}
+                                >
+                                    <Camera className="mr-2 h-4 w-4" />
+                                    {checkpoint.is_completed ? "View Evidence" : "Add Evidence"}
+                                </Button>
+                            </SheetTrigger>
+                            
+                            <SheetContent side="bottom" className="h-[90vh]">
+                                <SheetHeader>
+                                    <SheetTitle>
+                                        {checkpoint.is_completed 
+                                            ? `Evidence: ${checkpoint.title}`
+                                            : `Submit Evidence: ${checkpoint.title}`
+                                        }
+                                    </SheetTitle>
+                                </SheetHeader>
+                                {checkpoint.is_completed ? (
+                                    <EvidenceViewer checkpointId={checkpoint.id} />
+                                ) : (
+                                    <EvidenceForm 
+                                        checkpointId={checkpoint.id} 
+                                        onSuccess={() => {
+                                            // Ideally trigger a refresh, but for now we rely on the parent or context if needed
+                                            // However, SortableItem doesn't easily pass this up without prop drilling refresh
+                                            window.location.reload() // Simplest for now given context limits
+                                        }}
+                                    />
+                                )}
+                            </SheetContent>
+                         </Sheet>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
+
 export function CheckpointList({ projectId }: CheckpointListProps) {
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedCheckpoint, setSelectedCheckpoint] = useState<Checkpoint | null>(null)
   
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   // Fetch checkpoints
   const fetchCheckpoints = async () => {
       try {
@@ -45,6 +148,44 @@ export function CheckpointList({ projectId }: CheckpointListProps) {
     fetchCheckpoints()
   }, [projectId])
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+        setCheckpoints((items) => {
+            const oldIndex = items.findIndex((i) => i.id === active.id);
+            const newIndex = items.findIndex((i) => i.id === over.id);
+            const newItems = arrayMove(items, oldIndex, newIndex);
+            
+            // Persist new order
+            const updates = newItems.map((item, index) => ({
+                id: item.id,
+                order: index + 1 // 1-based index
+            }));
+
+            // Optimistic update done, now DB update
+            // We can't do a bulk update with upsert easily if we don't include all fields or if we want to be safe.
+            // But we can iterate. For small lists, it's fine. 
+            // Better: use an RPC or upsert. Supabase upsert requires all primary keys.
+            // Checkpoints has ID.
+            
+            // Let's do a loop for simplicity or upsert if we map all necessary fields.
+            // We only need ID and order. But upsert typically replaces.
+            // Update is better.
+            
+            Promise.all(updates.map(u => 
+                supabase.from('checkpoints').update({ order: u.order }).eq('id', u.id)
+            )).catch(err => {
+                console.error("Failed to reorder", err)
+                toast.error("Failed to save order")
+                fetchCheckpoints() // Revert on error
+            });
+
+            return newItems;
+        });
+    }
+  }
+
   if (loading) {
       return <div>Loading tasks...</div>
   }
@@ -58,60 +199,27 @@ export function CheckpointList({ projectId }: CheckpointListProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {checkpoints.map((checkpoint) => (
-        <Card key={checkpoint.id} className={`${checkpoint.is_completed ? 'opacity-80' : ''}`}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base font-medium">
-                {checkpoint.title}
-            </CardTitle>
-            {checkpoint.is_completed ? (
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-            ) : (
-                <Circle className="h-5 w-5 text-gray-300" />
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-end pt-2">
-                 <Sheet>
-                    <SheetTrigger asChild>
-                        <Button 
-                            variant={checkpoint.is_completed ? "outline" : "default"} 
-                            size="sm"
-                            onClick={() => setSelectedCheckpoint(checkpoint)}
-                        >
-                            <Camera className="mr-2 h-4 w-4" />
-                            {checkpoint.is_completed ? "View Evidence" : "Add Evidence"}
-                        </Button>
-                    </SheetTrigger>
-                    
-                    <SheetContent side="bottom" className="h-[90vh]">
-                        <SheetHeader>
-                            <SheetTitle>
-                                {selectedCheckpoint?.is_completed 
-                                    ? `Evidence: ${selectedCheckpoint.title}`
-                                    : `Submit Evidence: ${selectedCheckpoint?.title}`
-                                }
-                            </SheetTitle>
-                        </SheetHeader>
-                        {selectedCheckpoint && (
-                            selectedCheckpoint.is_completed ? (
-                                <EvidenceViewer checkpointId={selectedCheckpoint.id} />
-                            ) : (
-                                <EvidenceForm 
-                                    checkpointId={selectedCheckpoint.id} 
-                                    onSuccess={() => {
-                                        fetchCheckpoints() 
-                                    }}
-                                />
-                            )
-                        )}
-                    </SheetContent>
-                 </Sheet>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <DndContext 
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext 
+        items={checkpoints.map(c => c.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-4">
+            {checkpoints.map((checkpoint) => (
+                <SortableCheckpointItem 
+                    key={checkpoint.id} 
+                    checkpoint={checkpoint} 
+                    onSelect={() => {}} // Not really needed for this design anymore since Sheet is inside
+                />
+            ))}
+        </div>
+      </SortableContext>
+    </DndContext>
   )
 }
+// Need to add toast import
+import { toast } from "sonner"

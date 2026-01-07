@@ -132,8 +132,8 @@ export function FriendManager({ userId }: { userId: string }) {
                                             <AvatarFallback><User className="h-3 w-3" /></AvatarFallback>
                                         </Avatar>
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-medium">{req.sender.username}</span>
-                                            <span className="text-xs text-muted-foreground">wants to connect</span>
+                                            <span className="text-sm font-medium">{req.sender.display_name || req.sender.username}</span>
+                                            <span className="text-xs text-muted-foreground">@{req.sender.username}</span>
                                         </div>
                                     </div>
                                     <div className="flex gap-1">
@@ -168,7 +168,10 @@ export function FriendManager({ userId }: { userId: string }) {
                                             <AvatarImage src={friend.avatar_url || ""} />
                                             <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
                                         </Avatar>
-                                        <span className="font-medium">{friend.username}</span>
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">{friend.display_name || friend.username}</span>
+                                            <span className="text-xs text-muted-foreground">@{friend.username}</span>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
