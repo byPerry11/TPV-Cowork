@@ -11,6 +11,8 @@ export interface Profile {
   username: string | null
   color_hex: string
   badges: string[]
+  avatar_url: string | null
+  display_name: string | null
   updated_at: string
 }
 
@@ -51,3 +53,30 @@ export interface Evidence {
   image_url: string | null
   created_at: string
 }
+
+// Achievement system types
+export type AchievementTier = 'bronze' | 'silver' | 'gold' | 'platinum'
+
+export interface Achievement {
+  id: string
+  name: string
+  description: string | null
+  icon: string | null
+  tier: AchievementTier
+  requirement_type: string | null
+  requirement_value: number | null
+  created_at: string
+}
+
+export interface UserAchievement {
+  user_id: string
+  achievement_id: string
+  earned_at: string
+  achievements: Achievement
+}
+
+export interface AchievementWithStatus extends Achievement {
+  is_earned: boolean
+  earned_at: string | null
+}
+
