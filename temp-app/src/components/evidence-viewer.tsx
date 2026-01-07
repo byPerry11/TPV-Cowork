@@ -10,6 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Star } from "lucide-react"
 import { toast } from "sonner"
+import { Card, CardContent } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Maximize2 } from "lucide-react"
 
 interface EvidenceViewerProps {
     checkpointId: string
@@ -84,29 +91,50 @@ export function EvidenceViewer({ checkpointId, userRole }: EvidenceViewerProps) 
 
     return (
         <div className="space-y-6 pt-4">
+            {/* Evidence Image with Fullscreen */}
             {evidence.image_url ? (
-                <div className="rounded-lg border overflow-hidden bg-black/5">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                        src={evidence.image_url}
-                        alt="Evidence"
-                        className="w-full h-auto object-cover max-h-[400px]"
-                    />
-                </div>
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Card className="max-w-sm md:max-w-md lg:max-w-lg mx-auto cursor-pointer hover:shadow-lg transition-shadow group overflow-hidden">
+                            <CardContent className="p-0 relative">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={evidence.image_url}
+                                    alt="Evidence"
+                                    className="w-full h-auto object-cover aspect-video rounded-md"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                    <Maximize2 className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl w-full p-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={evidence.image_url}
+                            alt="Evidence Fullscreen"
+                            className="w-full h-auto object-contain max-h-[85vh] rounded-md"
+                        />
+                    </DialogContent>
+                </Dialog>
             ) : (
-                <div className="p-8 border rounded-lg border-dashed text-center text-muted-foreground">
-                    No image attached
-                </div>
+                <Card className="max-w-sm md:max-w-md mx-auto">
+                    <CardContent className="p-8 text-center text-muted-foreground">
+                        No image attached
+                    </CardContent>
+                </Card>
             )}
 
-            <div className="space-y-4">
-                <h4 className="flex items-center gap-2 font-medium">
+            {/* Notes Section - Compact */}
+            <div className="space-y-2">
+                <h4 className="flex items-center gap-2 font-medium text-sm">
                     <FileText className="h-4 w-4" />
                     Notes
                 </h4>
-                <div className="p-3 bg-muted rounded-md text-sm">
+                <p className="text-sm text-muted-foreground bg-muted/50 rounded-md p-3">
                     {evidence.note || "No notes provided."}
-                </div>
+                </p>
             </div>
 
             <Separator />
@@ -116,14 +144,14 @@ export function EvidenceViewer({ checkpointId, userRole }: EvidenceViewerProps) 
 
             <Separator /> 
             
-            <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+            <div className="flex flex-col gap-1 text-xs text-muted-foreground pt-2 border-t">
                 <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
+                    <User className="h-3 w-3" />
                     <span>Submitted by: <span className="font-medium text-foreground">{evidence.profiles?.username || "Unknown"}</span></span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>Date: {evidence.created_at ? new Date(evidence.created_at).toLocaleString() : "Unknown"}</span>
+                    <Calendar className="h-3 w-3" />
+                    <span>{evidence.created_at ? new Date(evidence.created_at).toLocaleString() : "Unknown"}</span>
                 </div>
             </div>
         </div>
