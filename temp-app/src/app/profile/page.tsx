@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { Loader2, User, Award, ArrowLeft, Menu, UsersRound } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -17,26 +17,28 @@ import { FriendManager } from "@/components/friend-manager"
 
 function ProfileContent() {
     const router = useRouter()
-    const [loading, setLoading] = useState(true)
+    const searchParams = useSearchParams()
+    const defaultTab = searchParams.get('tab') || 'profile'
     const [userId, setUserId] = useState<string | null>(null)
-    const { toggle } = useSidebar()
+    const [loading, setLoading] = useState(true)
+    const { toggle } = useSidebar() // Keep useSidebar for the toggle button
 
     useEffect(() => {
-        const checkUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession()
-            if (!session) {
-                router.push("/login")
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                router.push('/login')
                 return
             }
-            setUserId(session.user.id)
+            setUserId(user.id)
             setLoading(false)
         }
-        checkUser()
+        getUser()
     }, [router])
 
     if (loading) {
         return (
-            <div className="flex h-screen w-full items-center justify-center">
+            <div className="flex h-screen items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         )
@@ -147,7 +149,9 @@ function ProfileContent() {
 export default function ProfilePage() {
     return (
         <SidebarProvider>
-            <ProfileContent />
+            <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+                <ProfileContent />
+            </Suspense>
         </SidebarProvider>
     )
 }

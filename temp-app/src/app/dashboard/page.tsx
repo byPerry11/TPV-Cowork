@@ -11,6 +11,7 @@ import { ProjectList } from "@/components/project-list"
 import { AppSidebar } from "@/components/app-sidebar"
 import { StatsCards } from "@/components/stats-cards"
 import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context"
+import { UserSearch } from "@/components/user-search"
 
 function DashboardContent() {
   const router = useRouter()
@@ -121,40 +122,32 @@ function DashboardContent() {
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto">
         <div className="container mx-auto p-4 md:p-6 space-y-6 md:space-y-8">
-          {/* Header with mobile menu button */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggle}
-                className="md:hidden"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-              <div className="flex-1">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
-                <p className="text-sm md:text-base text-muted-foreground">
-                  Overview of your projects and performance.
-                </p>
-              </div>
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex flex-col gap-2 w-full md:w-auto">
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggle}
+                            className="md:hidden"
+                        >
+                            <Menu className="h-5 w-5" />
+                        </Button>
+                        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                    </div>
+                    <p className="text-sm text-muted-foreground hidden md:block">
+                        Overview of your projects and performance.
+                    </p>
+                </div>
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full md:w-auto">
+                    <UserSearch />
+                    <CreateProjectDialog onSuccess={handleProjectCreated} />
+                </div>
             </div>
-            <CreateProjectDialog onSuccess={handleProjectCreated} />
-          </div>
 
-          {/* Project List */}
-          <div className="space-y-4">
-            <h2 className="text-lg md:text-xl font-semibold tracking-tight">Your Projects</h2>
-            {userId && <ProjectList userId={userId} key={refreshKey} />}
-          </div>
-
-          {/* Stats Cards */}
-          <StatsCards
-            totalProjects={stats.totalProjects}
-            activeProjects={stats.activeProjects}
-            pendingTasks={stats.pendingTasks}
-            avgProgress={stats.avgProgress}
-          />
+          <ProjectList key={refreshKey} userId={userId!} />
+          
+          <StatsCards {...stats} />
         </div>
       </main>
     </div>

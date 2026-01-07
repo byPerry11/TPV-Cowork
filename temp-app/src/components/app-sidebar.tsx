@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { LayoutDashboard, FolderKanban, Settings, LogOut, User, X } from "lucide-react"
+import { LayoutDashboard, FolderKanban, Settings, LogOut, User, X, UsersRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { supabase } from "@/lib/supabaseClient"
@@ -51,6 +51,7 @@ export function AppSidebar() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard", label: "Projects", icon: FolderKanban },
     { href: "/profile", label: "Profile", icon: User },
+    { href: "/profile?tab=friends", label: "Partners", icon: UsersRound },
     { href: "#", label: "Settings", icon: Settings },
   ]
 
