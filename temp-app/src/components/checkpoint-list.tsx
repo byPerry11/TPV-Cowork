@@ -27,14 +27,16 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface CheckpointListProps {
   projectId: string
+  userRole: string | null
 }
 
 interface SortableCheckpointItemProps {
   checkpoint: Checkpoint
   onSelect: (checkpoint: Checkpoint) => void
+  userRole: string | null
 }
 
-function SortableCheckpointItem({ checkpoint, onSelect }: SortableCheckpointItemProps) {
+function SortableCheckpointItem({ checkpoint, onSelect, userRole }: SortableCheckpointItemProps) {
     const {
         attributes,
         listeners,
@@ -92,7 +94,7 @@ function SortableCheckpointItem({ checkpoint, onSelect }: SortableCheckpointItem
                                     </SheetTitle>
                                 </SheetHeader>
                                 {checkpoint.is_completed ? (
-                                    <EvidenceViewer checkpointId={checkpoint.id} />
+                                    <EvidenceViewer checkpointId={checkpoint.id} userRole={userRole} />
                                 ) : (
                                     <EvidenceForm 
                                         checkpointId={checkpoint.id} 
@@ -112,7 +114,7 @@ function SortableCheckpointItem({ checkpoint, onSelect }: SortableCheckpointItem
     )
 }
 
-export function CheckpointList({ projectId }: CheckpointListProps) {
+export function CheckpointList({ projectId, userRole }: CheckpointListProps) {
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([])
   const [loading, setLoading] = useState(true)
   
@@ -213,6 +215,7 @@ export function CheckpointList({ projectId }: CheckpointListProps) {
                 <SortableCheckpointItem 
                     key={checkpoint.id} 
                     checkpoint={checkpoint} 
+                    userRole={userRole}
                     onSelect={() => {}} // Not really needed for this design anymore since Sheet is inside
                 />
             ))}

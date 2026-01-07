@@ -11,6 +11,7 @@ import { ManageMembersDialog } from "@/components/manage-members-dialog"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context"
 import { Project } from "@/types"
+import { useProjectRole } from "@/hooks/use-project-role"
 
 function ProjectDetailContent() {
   const params = useParams()
@@ -21,6 +22,7 @@ function ProjectDetailContent() {
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
+  const { role: userRole } = useProjectRole(id)
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -103,7 +105,7 @@ function ProjectDetailContent() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <CheckpointList projectId={project.id} key={refreshKey} />
+          <CheckpointList projectId={project.id} userRole={userRole} key={refreshKey} />
         </main>
       </div>
     </div>

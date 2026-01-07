@@ -5,9 +5,15 @@ import { supabase } from "@/lib/supabaseClient"
 import { Loader2, User, FileText, Calendar } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { format } from "date-fns"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Star } from "lucide-react"
+import { toast } from "sonner"
 
 interface EvidenceViewerProps {
     checkpointId: string
+    userRole: string | null
 }
 
 interface EvidenceRecord {
@@ -20,7 +26,7 @@ interface EvidenceRecord {
     }
 }
 
-export function EvidenceViewer({ checkpointId }: EvidenceViewerProps) {
+export function EvidenceViewer({ checkpointId, userRole }: EvidenceViewerProps) {
     const [evidence, setEvidence] = useState<EvidenceRecord | null>(null)
     const [loading, setLoading] = useState(true)
 
@@ -105,6 +111,11 @@ export function EvidenceViewer({ checkpointId }: EvidenceViewerProps) {
 
             <Separator />
 
+            {/* Admin Review Section */}
+            <ReviewSection checkpointId={checkpointId} userRole={userRole} />
+
+            <Separator /> 
+            
             <div className="flex flex-col gap-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />
@@ -113,6 +124,133 @@ export function EvidenceViewer({ checkpointId }: EvidenceViewerProps) {
                 <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
                     <span>Date: {evidence.created_at ? new Date(evidence.created_at).toLocaleString() : "Unknown"}</span>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function ReviewSection({ checkpointId, userRole }: { checkpointId: string, userRole: string | null }) {
+    const [rating, setRating] = useState<string>("")
+    const [comment, setComment] = useState("")
+    const [isSaving, setIsSaving] = useState(false)
+    const [isEditing, setIsEditing] = useState(false)
+    const [hasReview, setHasReview] = useState(false)
+
+    // Check if user can edit
+    const canEdit = userRole === 'admin' || userRole === 'manager'
+
+    useEffect(() => {
+        const fetchReview = async () => {
+            const { data, error } = await supabase
+                .from('checkpoints')
+                .select('rating, admin_comment')
+                .eq('id', checkpointId)
+                .single()
+            
+            if (data) {
+                if (data.rating !== null || data.admin_comment) {
+                    setHasReview(true)
+                    setRating(data.rating?.toString() || "")
+                    setComment(data.admin_comment || "")
+                }
+            }
+        }
+        fetchReview()
+    }, [checkpointId])
+
+    const handleSave = async () => {
+        setIsSaving(true)
+        try {
+            const numRating = parseFloat(rating)
+            if (isNaN(numRating) || numRating < 1 || numRating > 10) {
+                toast.error("Invalid Rating", { description: "Rating must be between 1.0 and 10.0" })
+                setIsSaving(false)
+                return
+            }
+
+            const { error } = await supabase
+                .from('checkpoints')
+                .update({ 
+                    rating: numRating,
+                    admin_comment: comment
+                 })
+                .eq('id', checkpointId)
+
+            if (error) throw error
+            
+            toast.success("Review saved")
+            setHasReview(true)
+            setIsEditing(false)
+        } catch (error) {
+            toast.error("Failed to save review")
+            console.error(error)
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    if (!hasReview && !canEdit) return null
+
+    if (hasReview && !isEditing) {
+        return (
+            <div className="space-y-3 bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-md border border-yellow-100 dark:border-yellow-900/50">
+                <div className="flex items-center justify-between">
+                    <h4 className="font-semibold flex items-center gap-2 text-yellow-800 dark:text-yellow-500">
+                        <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                        Manager Review
+                    </h4>
+                    {canEdit && (
+                        <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>Edit</Button>
+                    )}
+                </div>
+                <div className="flex items-center gap-4">
+                     <div className="bg-white dark:bg-black/20 rounded px-3 py-1 font-bold text-lg border">
+                        {rating} <span className="text-xs text-muted-foreground font-normal">/ 10</span>
+                     </div>
+                </div>
+                {comment && (
+                    <p className="text-sm italic text-muted-foreground">
+                        "{comment}"
+                    </p>
+                )}
+            </div>
+        )
+    }
+
+    // Edit Mode (Only for Admins/Managers)
+    return (
+        <div className="space-y-4 border p-4 rounded-md bg-muted/30">
+            <h4 className="font-medium">Manager Review</h4>
+            <div className="grid gap-4">
+                <div className="grid w-full max-w-xs items-center gap-1.5">
+                    <label className="text-sm font-medium">Rating (1.0 - 10.0)</label>
+                    <Input 
+                        type="number" 
+                        step="0.1" 
+                        min="1" 
+                        max="10" 
+                        placeholder="10.0"
+                        value={rating}
+                        onChange={(e) => setRating(e.target.value)}
+                    />
+                </div>
+                <div className="grid w-full gap-1.5">
+                    <label className="text-sm font-medium">Comment</label>
+                    <Textarea 
+                        placeholder="Good job, but check..."
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                    />
+                </div>
+                <div className="flex gap-2 justify-end">
+                    {hasReview && (
+                        <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                    )}
+                    <Button onClick={handleSave} disabled={isSaving}>
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Review
+                    </Button>
                 </div>
             </div>
         </div>
