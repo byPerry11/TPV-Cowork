@@ -28,13 +28,22 @@ import {
 } from "@/components/ui/form"
 import { supabase } from "@/lib/supabaseClient"
 
-const formSchema = z.object({
+const loginSchema = z.object({
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
   }),
+  // Include confirmPassword as optional to satisfy the superset interface check in useForm
+  confirmPassword: z.string().optional(),
+})
+
+const signUpSchema = loginSchema.extend({
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 })
 
 export default function LoginPage() {
@@ -43,11 +52,12 @@ export default function LoginPage() {
   const [checkingSession, setCheckingSession] = useState(true)
   const router = useRouter()
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof signUpSchema>>({
+    resolver: zodResolver(isSignUp ? signUpSchema : loginSchema),
     defaultValues: {
       email: "",
       password: "",
+      confirmPassword: "",
     },
   })
 
@@ -64,7 +74,13 @@ export default function LoginPage() {
     checkSession()
   }, [router])
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  // Reset form errors when switching modes
+  useEffect(() => {
+    form.clearErrors()
+    form.reset()
+  }, [isSignUp, form])
+
+  async function onSubmit(values: z.infer<typeof signUpSchema>) {
     setIsLoading(true)
     try {
       if (isSignUp) {
@@ -99,7 +115,6 @@ export default function LoginPage() {
         }
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       toast.error("An error occurred.", { description: err.message })
       console.error(err)
@@ -156,6 +171,23 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
+              
+              {isSignUp && (
+                  <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              )}
+
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSignUp ? "Sign Up" : "Sign In"}
@@ -164,13 +196,14 @@ export default function LoginPage() {
           </Form>
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
-          <Button
-            variant="link"
-            className="w-full text-sm text-muted-foreground"
-            onClick={() => setIsSignUp(!isSignUp)}
-          >
-            {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
-          </Button>
+            <Button 
+                variant="link" 
+                className="w-full text-sm text-muted-foreground"
+                onClick={() => setIsSignUp(!isSignUp)}
+                type="button"
+            >
+                {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+            </Button>
         </CardFooter>
       </Card>
     </div>
