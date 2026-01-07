@@ -62,7 +62,8 @@ export function CreateProjectDialog({ onSuccess }: CreateProjectDialogProps) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      const { error } = await supabase
+      // Create project and get the created project data
+      const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .insert({
           title: values.title,
@@ -71,17 +72,29 @@ export function CreateProjectDialog({ onSuccess }: CreateProjectDialogProps) {
           max_users: values.max_users,
           status: 'active'
         })
-        .select() // Returning data isn't strictly necessary unless we want to redirect
+        .select()
+        .single()
 
-      if (error) throw error
+      if (projectError) throw projectError
 
-      toast.success("Project created successfully")
+      // Add owner as admin member of the project
+      const { error: memberError } = await supabase
+        .from('project_members')
+        .insert({
+          project_id: projectData.id,
+          user_id: session.user.id,
+          role: 'admin'
+        })
+
+      if (memberError) throw memberError
+
+      toast.success("Proyecto creado exitosamente")
       setOpen(false)
       form.reset()
       onSuccess()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      toast.error("Failed to create project", {
+      toast.error("Error al crear proyecto", {
         description: error.message
       })
     } finally {

@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ProfileEditForm } from "@/components/profile-edit-form"
 import { AvatarUpload } from "@/components/avatar-upload"
 import { AchievementsDisplay } from "@/components/achievements-display"
+import { UserInfo } from "@/components/user-info"
 
 export default function ProfilePage() {
     const router = useRouter()
@@ -62,6 +63,18 @@ export default function ProfilePage() {
                         </TabsList>
 
                         <TabsContent value="profile" className="space-y-4">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Información de Cuenta</CardTitle>
+                                    <CardDescription>
+                                        Detalles de tu cuenta
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    {userId && <UserInfo userId={userId} />}
+                                </CardContent>
+                            </Card>
+
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Foto de Perfil</CardTitle>

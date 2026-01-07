@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Upload, Loader2, User } from "lucide-react"
+import { Upload, Loader2, User, Crop } from "lucide-react"
 import { toast } from "sonner"
+import imageCompression from 'browser-image-compression'
 
 interface AvatarUploadProps {
     userId: string
@@ -15,6 +16,7 @@ export function AvatarUpload({ userId }: AvatarUploadProps) {
     const [uploading, setUploading] = useState(false)
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
     const [username, setUsername] = useState<string>("")
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -32,6 +34,60 @@ export function AvatarUpload({ userId }: AvatarUploadProps) {
         fetchProfile()
     }, [userId])
 
+    const compressAndCropImage = async (file: File): Promise<File> => {
+        try {
+            // Compression options
+            const options = {
+                maxSizeMB: 0.5, // Max 500KB
+                maxWidthOrHeight: 400, // Max 400px (good for avatars)
+                useWebWorker: true,
+                fileType: 'image/jpeg' as const
+            }
+
+            // Compress image
+            const compressedFile = await imageCompression(file, options)
+
+            // Create circular crop canvas
+            const img = await imageCompression.getDataUrlFromFile(compressedFile)
+            const image = new Image()
+            await new Promise((resolve) => {
+                image.onload = resolve
+                image.src = img
+            })
+
+            const canvas = document.createElement('canvas')
+            const ctx = canvas.getContext('2d')
+            if (!ctx) throw new Error('Canvas not supported')
+
+            // Set canvas to square (circular crop)
+            const size = Math.min(image.width, image.height)
+            canvas.width = size
+            canvas.height = size
+
+            // Crop to center square
+            const sx = (image.width - size) / 2
+            const sy = (image.height - size) / 2
+
+            // Draw circular clipped image
+            ctx.beginPath()
+            ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2)
+            ctx.closePath()
+            ctx.clip()
+
+            ctx.drawImage(image, sx, sy, size, size, 0, 0, size, size)
+
+            // Convert canvas to blob
+            const blob = await new Promise<Blob>((resolve) => {
+                canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.85)
+            })
+
+            return new File([blob], `avatar-${Date.now()}.jpg`, { type: 'image/jpeg' })
+        } catch (error) {
+            console.error('Image compression error:', error)
+            throw error
+        }
+    }
+
     const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
         try {
             setUploading(true)
@@ -40,9 +96,12 @@ export function AvatarUpload({ userId }: AvatarUploadProps) {
                 throw new Error('Debes seleccionar una imagen')
             }
 
-            const file = event.target.files[0]
-            const fileExt = file.name.split('.').pop()
-            const filePath = `${userId}/avatar.${fileExt}`
+            const originalFile = event.target.files[0]
+
+            // Compress and crop image
+            const processedFile = await compressAndCropImage(originalFile)
+
+            const filePath = `${userId}/avatar.jpg`
 
             // Delete old avatar if exists
             if (avatarUrl) {
@@ -55,38 +114,43 @@ export function AvatarUpload({ userId }: AvatarUploadProps) {
             // Upload new avatar
             const { error: uploadError } = await supabase.storage
                 .from('avatars')
-                .upload(filePath, file, { upsert: true })
+                .upload(filePath, processedFile, { upsert: true })
 
             if (uploadError) throw uploadError
 
-            // Get public URL
+            // Get public URL with cache buster
             const { data: { publicUrl } } = supabase.storage
                 .from('avatars')
                 .getPublicUrl(filePath)
 
+            const urlWithCacheBuster = `${publicUrl}?t=${Date.now()}`
+
             // Update profile
             const { error: updateError } = await supabase
                 .from('profiles')
-                .update({ avatar_url: publicUrl })
+                .update({ avatar_url: urlWithCacheBuster })
                 .eq('id', userId)
 
             if (updateError) throw updateError
 
-            setAvatarUrl(publicUrl)
-            toast.success('Foto de perfil actualizada')
-        } catch (error: any) {
+            setAvatarUrl(urlWithCacheBuster)
+            toast.success('Foto de perfil actualizada y optimizada')
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
             toast.error('Error al subir la imagen', {
                 description: error.message
             })
         } finally {
             setUploading(false)
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ''
+            }
         }
     }
 
     return (
         <div className="flex items-center gap-6">
-            <Avatar className="h-24 w-24">
+            <Avatar className="h-24 w-24 ring-2 ring-offset-2 ring-primary/10">
                 <AvatarImage src={avatarUrl || ""} alt={username} />
                 <AvatarFallback className="bg-primary/10 text-primary text-2xl">
                     {username?.charAt(0).toUpperCase() || <User className="h-10 w-10" />}
@@ -94,18 +158,19 @@ export function AvatarUpload({ userId }: AvatarUploadProps) {
             </Avatar>
 
             <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium">Foto de perfil circular</p>
                 <p className="text-sm text-muted-foreground">
-                    JPG, GIF o PNG. Tamaño máximo 1MB.
+                    JPG, GIF o PNG. Se optimizará automáticamente.
                 </p>
                 <Button
                     variant="outline"
                     disabled={uploading}
-                    onClick={() => document.getElementById('avatar-upload')?.click()}
+                    onClick={() => fileInputRef.current?.click()}
                 >
                     {uploading ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Subiendo...
+                            Procesando...
                         </>
                     ) : (
                         <>
@@ -115,6 +180,7 @@ export function AvatarUpload({ userId }: AvatarUploadProps) {
                     )}
                 </Button>
                 <input
+                    ref={fileInputRef}
                     type="file"
                     id="avatar-upload"
                     accept="image/*"
