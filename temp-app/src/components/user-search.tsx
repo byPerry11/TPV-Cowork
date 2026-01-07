@@ -115,7 +115,7 @@ export function UserSearch() {
                             placeholder="Search users..." 
                             className="pl-8"
                             value={query}
-                            onChange={(e) => handleSearch(e.target.value)}
+                            onChange={(e) => setQuery(e.target.value)}
                             onFocus={() => setOpen(true)}
                         />
                     </div>
