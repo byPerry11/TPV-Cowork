@@ -22,7 +22,6 @@ import { supabase } from "@/lib/supabaseClient"
 
 const evidenceSchema = z.object({
   note: z.string().optional(),
-  // image: z.instanceof(FileList).optional(), // Complicated for now, we'll handle file manualy
 })
 
 interface EvidenceFormProps {
@@ -48,6 +47,13 @@ export function EvidenceForm({ checkpointId, onSuccess }: EvidenceFormProps) {
   }
 
   async function onSubmit(values: z.infer<typeof evidenceSchema>) {
+    if (!values.note && !file) {
+      toast.error("Requirement Missing", {
+        description: "You must provide either a note or an image to complete this checkpoint."
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -65,16 +71,17 @@ export function EvidenceForm({ checkpointId, onSuccess }: EvidenceFormProps) {
         const filePath = `${checkpointId}/${fileName}`
 
         // Assuming bucket 'evidences' exists.
-        // Note: If bucket doesn't exist, this will fail. We'll handle gracefully.
         const { error: uploadError } = await supabase.storage
           .from('evidences')
           .upload(filePath, file)
 
         if (uploadError) {
           console.warn("Upload failed (bucket might be missing):", uploadError)
-          // For demo purposes, we might just proceed or show simpler error
-          // toast.error("Image upload failed")
-          // return
+          // Don't fail the whole process if upload fails, unless strict. 
+          // For now let's warn user but maybe continue? No, evidence is required.
+           toast.error("Image upload failed. Please try again or just add a note.")
+           setIsLoading(false)
+           return
         } else {
           const { data: { publicUrl } } = supabase.storage
             .from('evidences')
@@ -97,8 +104,7 @@ export function EvidenceForm({ checkpointId, onSuccess }: EvidenceFormProps) {
         throw dbError
       }
 
-      // Mark Checkpoint as Completed (Optional business logic)
-      // Usually depends on rules, but for now we mark it.
+      // Mark Checkpoint as Completed
       await supabase
         .from("checkpoints")
         .update({ is_completed: true })
@@ -124,6 +130,12 @@ export function EvidenceForm({ checkpointId, onSuccess }: EvidenceFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
 
+        <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-md border border-blue-100 dark:border-blue-900">
+             <p className="text-sm text-blue-800 dark:text-blue-300">
+                To complete this task, please provide a photo evidence <strong>OR</strong> a note explaining the result.
+             </p>
+        </div>
+
         {/* Camera / File Input */}
         <div className="grid w-full max-w-sm items-center gap-1.5">
           <FormLabel htmlFor="picture">Evidence Photo</FormLabel>
@@ -144,7 +156,7 @@ export function EvidenceForm({ checkpointId, onSuccess }: EvidenceFormProps) {
           name="note"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Note (Optional)</FormLabel>
+              <FormLabel>Note (Optional if photo provided)</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Add observations..."
@@ -159,7 +171,7 @@ export function EvidenceForm({ checkpointId, onSuccess }: EvidenceFormProps) {
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Submit Evidence
+          Submit Evidence & Complete
         </Button>
       </form>
     </Form>

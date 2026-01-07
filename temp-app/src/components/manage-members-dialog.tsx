@@ -62,6 +62,8 @@ export function ManageMembersDialog({ projectId }: ManageMembersDialogProps) {
     const [loading, setLoading] = useState(false)
     const [adding, setAdding] = useState(false)
 
+    const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+
     const form = useForm<z.infer<typeof memberSchema>>({
         resolver: zodResolver(memberSchema),
         defaultValues: {
@@ -127,56 +129,57 @@ export function ManageMembersDialog({ projectId }: ManageMembersDialogProps) {
     async function onSubmit(values: z.infer<typeof memberSchema>) {
         setAdding(true)
         try {
-            // Find User by Username OR Email
-            // Note: Since 'username' column might be used for login logic or might differ from email,
-            // we should try checking reasonable columns. The schema validates it as an email, 
-            // so we might want to relax that if we allow usernames.
-            // For now, let's assume the user enters what serves as 'username' in our profiles table.
-            
-            // Try to find by exact username match first (case insensitive perhaps, but exact is safer for now)
-            // or if it's an email, we might not have it in public profile depending on privacy settings,
-            // but the requirement says 'username or email'.
-            // Let's assume input is matched against 'username' or 'email' (if stored in metadata/profile?)
-            // Or just 'username' column in profiles.
-            
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('id')
-                .or(`username.eq.${values.email},id.eq.${values.email}`) // Check username or ID directly? Or just username.
-                // ideally we check username.
-                .eq('username', values.email)
-                .maybeSingle()
-            
-            // Note: If you want to support checking by 'display_name' it's risky due to duplicates.
-            // Stick to username.
+            let targetUserId = selectedUserId
 
-            if (profileError || !profile) {
-                toast.error("User not found", {
-                    description: "No user found with that username."
-                })
-                return
+            if (!targetUserId) {
+                // Find User by Username OR Email
+                const query = values.email.trim()
+                
+                // Allow search by ID if it looks like a UUID (optional but handy)
+                // or just username / email
+                
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .or(`username.eq.${query},id.eq.${query}`) 
+                    .maybeSingle()
+                
+                 if (profileError || !profile) {
+                    toast.error("User not found", {
+                        description: "No user found with that username."
+                    })
+                    return
+                }
+                targetUserId = profile.id
             }
 
+            if (!targetUserId) return
+
             // 2. Check if already member
-            const existing = members.find(m => m.user_id === profile.id)
+            const existing = members.find(m => m.user_id === targetUserId)
             if (existing) {
                 toast.error("User is already a member")
                 return
             }
 
-            // 3. Add to project_members
+            // 3. Add to project_members (with pending status if implementing notifications later, 
+            // but for now keeping it simple or setting to 'active' if not yet implementing invitations fully in this step.
+            // Requirement says "Add friend returns User Not Found". Let's fix that first.
+            // We will add 'status' in the next step of the plan. For now, basic insert.)
             const { error: insertError } = await supabase
                 .from('project_members')
                 .insert({
                     project_id: projectId,
-                    user_id: profile.id,
-                    role: values.role
+                    user_id: targetUserId,
+                    role: values.role,
+                    status: 'pending' // Invites start as pending
                 })
 
             if (insertError) throw insertError
 
             toast.success("Member added successfully")
             form.reset()
+            setSelectedUserId(null)
             fetchMembers()
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -223,7 +226,14 @@ export function ManageMembersDialog({ projectId }: ManageMembersDialogProps) {
                                         <FormLabel>User (Username or Email)</FormLabel>
                                         <div className="flex flex-col gap-2">
                                             <FormControl>
-                                                <Input placeholder="Enter username or email" {...field} />
+                                                <Input 
+                                                    placeholder="Enter username or email" 
+                                                    {...field} 
+                                                    onChange={(e) => {
+                                                        field.onChange(e)
+                                                        setSelectedUserId(null) // Clear selection if typing
+                                                    }}
+                                                />
                                             </FormControl>
                                             
                                             {/* Friend Suggestions */}
@@ -237,11 +247,14 @@ export function ManageMembersDialog({ projectId }: ManageMembersDialogProps) {
                                                             .map(friend => (
                                                             <div 
                                                                 key={friend.id}
-                                                                className="flex items-center gap-2 bg-background border px-2 py-1 rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
-                                                                onClick={() => form.setValue("email", friend.username || "")}
+                                                                className={`flex items-center gap-2 border px-2 py-1 rounded-md cursor-pointer transition-colors ${selectedUserId === friend.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-accent'}`}
+                                                                onClick={() => {
+                                                                    form.setValue("email", friend.username || "")
+                                                                    setSelectedUserId(friend.id)
+                                                                }}
                                                             >
-                                                                <div className="h-4 w-4 rounded-full bg-primary/20 flex items-center justify-center">
-                                                                    <User className="h-3 w-3 text-primary" />
+                                                                <div className={`h-4 w-4 rounded-full flex items-center justify-center ${selectedUserId === friend.id ? 'bg-white/20' : 'bg-primary/20'}`}>
+                                                                    <User className={`h-3 w-3 ${selectedUserId === friend.id ? 'text-white' : 'text-primary'}`} />
                                                                 </div>
                                                                 <span className="text-sm font-medium">{friend.display_name || friend.username}</span>
                                                             </div>

@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/contexts/sidebar-context"
+import { NotificationsPopover } from "@/components/notifications-popover"
 
 interface UserProfile {
   email: string | undefined
@@ -134,10 +135,14 @@ export function AppSidebar() {
                     @{profile?.username}
                   </span>
                 </div>
+                </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <NotificationsPopover />
+                <Button variant="ghost" size="icon" onClick={handleLogout}>
+                    <LogOut className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
