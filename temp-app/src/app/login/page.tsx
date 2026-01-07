@@ -35,11 +35,15 @@ const loginSchema = z.object({
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
   }),
-  // Include confirmPassword as optional to satisfy the superset interface check in useForm
+  // Optional fields for typing compatibility with signUpSchema
   confirmPassword: z.string().optional(),
+  username: z.string().optional(),
+  displayName: z.string().optional(),
 })
 
 const signUpSchema = loginSchema.extend({
+  username: z.string().min(3, "Username must be at least 3 characters").regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+  displayName: z.string().min(2, "Display name must be at least 2 characters"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
@@ -58,6 +62,8 @@ export default function LoginPage() {
       email: "",
       password: "",
       confirmPassword: "",
+      username: "",
+      displayName: "",
     },
   })
 
@@ -87,6 +93,12 @@ export default function LoginPage() {
         const { data, error } = await supabase.auth.signUp({
           email: values.email,
           password: values.password,
+          options: {
+            data: {
+              username: values.username,
+              display_name: values.displayName,
+            }
+          }
         })
         if (error) throw error
 
@@ -145,6 +157,36 @@ export default function LoginPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {isSignUp && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username</FormLabel>
+                        <FormControl>
+                          <Input placeholder="jdoe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="displayName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Display Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
               <FormField
                 control={form.control}
                 name="email"

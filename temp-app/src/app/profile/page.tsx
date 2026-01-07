@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
-import { Loader2, User, Award, ArrowLeft, Menu } from "lucide-react"
+import { Loader2, User, Award, ArrowLeft, Menu, UsersRound } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import { AchievementsDisplay } from "@/components/achievements-display"
 import { UserInfo } from "@/components/user-info"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context"
+import { FriendManager } from "@/components/friend-manager"
 
 function ProfileContent() {
     const router = useRouter()
@@ -76,7 +77,7 @@ function ProfileContent() {
 
                     {/* Tabs */}
                     <Tabs defaultValue="profile" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
+                        <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="profile">
                                 <User className="mr-2 h-4 w-4" />
                                 Perfil
@@ -84,6 +85,10 @@ function ProfileContent() {
                             <TabsTrigger value="achievements">
                                 <Award className="mr-2 h-4 w-4" />
                                 Logros
+                            </TabsTrigger>
+                            <TabsTrigger value="friends">
+                                <UsersRound className="mr-2 h-4 w-4" />
+                                Amigos
                             </TabsTrigger>
                         </TabsList>
 
@@ -127,6 +132,10 @@ function ProfileContent() {
 
                         <TabsContent value="achievements">
                             {userId && <AchievementsDisplay userId={userId} />}
+                        </TabsContent>
+
+                        <TabsContent value="friends">
+                            {userId && <FriendManager userId={userId} />}
                         </TabsContent>
                     </Tabs>
                 </div>

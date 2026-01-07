@@ -156,72 +156,13 @@ export function ManageMembersDialog({ projectId }: ManageMembersDialogProps) {
         toast.info("Remove functionality not strictly required for this demo")
     }
 
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Manage Members
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[95vw] sm:max-w-[500px]">
-                <DialogHeader>
-                    <DialogTitle>Manage Members</DialogTitle>
-                    <DialogDescription>
-                        Invite users to collaborate on this project.
-                    </DialogDescription>
-                </DialogHeader>
-
-            if (profileError || !profile) {
-                toast.error("User not found", {
-                    description: "Ensure the user has registered in the app first."
-                })
-                return
-            }
-
-            // 2. Check if already member
-            const existing = members.find(m => m.user_id === profile.id)
-            if (existing) {
-                toast.error("User is already a member")
-                return
-            }
-
-            // 3. Add to project_members
-            const { error: insertError } = await supabase
-                .from('project_members')
-                .insert({
-                    project_id: projectId,
-                    user_id: profile.id,
-                    role: values.role
-                })
-
-            if (insertError) throw insertError
-
-            toast.success("Member added successfully")
-            form.reset()
-            fetchMembers()
-
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (error: any) {
-            toast.error("Failed to add member", {
-                description: error.message
-            })
-        } finally {
-            setAdding(false)
-        }
-    }
-
-    const removeMember = async (userId: string) => {
-        // Logic to remove member (omitted for brevity, can be added easily)
-        toast.info("Remove functionality not strictly required for this demo")
-    }
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Manage Members
+                    <UserPlus className="h-4 w-4 md:mr-2" />
+                    <span className="hidden md:inline">Manage Members</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
