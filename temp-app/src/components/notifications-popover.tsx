@@ -29,7 +29,7 @@ interface RejectedCheckpoint {
     project: { title: string }
 }
 
-export function NotificationsPopover() {
+export function NotificationsPopover({ children }: { children?: React.ReactNode }) {
     const [open, setOpen] = useState(false)
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -153,12 +153,14 @@ export function NotificationsPopover() {
             if (o) fetchNotifications()
         }}>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="h-5 w-5" />
-                    {count > 0 && (
-                        <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-red-600 border border-background" />
-                    )}
-                </Button>
+                {children || (
+                    <Button variant="ghost" size="icon" className="relative">
+                        <Bell className="h-5 w-5" />
+                        {count > 0 && (
+                            <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-red-600 border border-background" />
+                        )}
+                    </Button>
+                )}
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0" align="end">
                 <div className="flex items-center justify-between px-4 py-3 border-b">

@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
-import { Loader2, User, Award, ArrowLeft, Menu, UsersRound } from "lucide-react"
+import { Loader2, User, Award, ArrowLeft, UsersRound, LogOut } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,9 +11,9 @@ import { ProfileEditForm } from "@/components/profile-edit-form"
 import { AvatarUpload } from "@/components/avatar-upload"
 import { AchievementsDisplay } from "@/components/achievements-display"
 import { UserInfo } from "@/components/user-info"
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context"
+import { FloatingNav } from "@/components/floating-nav"
 import { FriendManager } from "@/components/friend-manager"
+import { toast } from "sonner"
 
 function ProfileContent() {
     const router = useRouter()
@@ -21,7 +21,6 @@ function ProfileContent() {
     const defaultTab = searchParams.get('tab') || 'profile'
     const [userId, setUserId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
-    const { toggle } = useSidebar() // Keep useSidebar for the toggle button
 
     useEffect(() => {
         const getUser = async () => {
@@ -44,37 +43,45 @@ function ProfileContent() {
         )
     }
 
+    const handleLogout = async () => {
+        const { error } = await supabase.auth.signOut()
+        if (error) {
+            toast.error("Error signing out")
+        } else {
+            router.push("/login")
+        }
+    }
+
     return (
         <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-            <AppSidebar />
+            <FloatingNav />
 
             <main className="flex-1 overflow-y-auto">
-                <div className="container mx-auto p-4 md:p-6 space-y-6 md:space-y-8 max-w-4xl">
+                <div className="container mx-auto p-4 md:p-6 space-y-6 md:space-y-8 max-w-4xl pb-24 md:pb-6">
                     {/* Header */}
                     <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 flex-1">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={toggle}
-                                className="md:hidden"
-                            >
-                                <Menu className="h-5 w-5" />
-                            </Button>
-                            <div className="flex-1">
-                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Mi Perfil</h1>
-                                <p className="text-sm md:text-base text-muted-foreground">
-                                    Gestiona tu información personal y logros
-                                </p>
-                            </div>
+                        <div className="flex-1">
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Mi Perfil</h1>
+                            <p className="text-sm md:text-base text-muted-foreground">
+                                Gestiona tu información personal y logros
+                            </p>
                         </div>
-                        <Button variant="outline" onClick={() => router.push("/dashboard")} className="hidden sm:flex">
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Volver al Home
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={() => router.push("/dashboard")} className="sm:hidden">
-                            <ArrowLeft className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => router.push("/dashboard")} className="hidden sm:flex">
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                Volver al Home
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={() => router.push("/dashboard")} className="sm:hidden">
+                                <ArrowLeft className="h-4 w-4" />
+                            </Button>
+                            <Button variant="destructive" onClick={handleLogout} className="hidden sm:flex">
+                                <LogOut className="mr-2 h-4 w-4" />
+                                Cerrar Sesión
+                            </Button>
+                            <Button variant="destructive" size="icon" onClick={handleLogout} className="sm:hidden">
+                                <LogOut className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Tabs */}
@@ -148,10 +155,8 @@ function ProfileContent() {
 
 export default function ProfilePage() {
     return (
-        <SidebarProvider>
-            <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
-                <ProfileContent />
-            </Suspense>
-        </SidebarProvider>
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <ProfileContent />
+        </Suspense>
     )
 }

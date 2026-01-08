@@ -3,20 +3,17 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
-import { Loader2, Menu } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Loader2 } from "lucide-react"
 
 import { CreateProjectDialog } from "@/components/create-project-dialog"
 import { ProjectList } from "@/components/project-list"
-import { AppSidebar } from "@/components/app-sidebar"
+import { FloatingNav } from "@/components/floating-nav"
 import { StatsCards } from "@/components/stats-cards"
-import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context"
 
-function DashboardContent() {
+export default function DashboardPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
-  const { toggle } = useSidebar()
 
   const [stats, setStats] = useState({
     totalProjects: 0,
@@ -116,24 +113,14 @@ function DashboardContent() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-      <AppSidebar />
+      <FloatingNav />
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto p-4 md:p-6 space-y-6 md:space-y-8">
+        <div className="container mx-auto p-4 md:p-6 space-y-6 md:space-y-8 pb-24 md:pb-6">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex flex-col gap-2 w-full md:w-auto">
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={toggle}
-                            className="md:hidden"
-                        >
-                            <Menu className="h-5 w-5" />
-                        </Button>
-                        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                    </div>
+                    <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
                     <p className="text-sm text-muted-foreground hidden md:block">
                         Overview of your projects and performance.
                     </p>
@@ -149,13 +136,5 @@ function DashboardContent() {
         </div>
       </main>
     </div>
-  )
-}
-
-export default function DashboardPage() {
-  return (
-    <SidebarProvider>
-      <DashboardContent />
-    </SidebarProvider>
   )
 }
