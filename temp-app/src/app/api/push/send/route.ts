@@ -5,14 +5,34 @@ import webpush from 'web-push'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-// Configure web-push with VAPID details
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || 'mailto:example@yourdomain.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
+// Configure web-push with VAPID details (Lazy load)
+const setupWebPush = () => {
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    console.warn('VAPID keys are missing during build time or runtime configuration')
+    return false
+  }
+
+  try {
+    webpush.setVapidDetails(
+      process.env.VAPID_SUBJECT || 'mailto:example@yourdomain.com',
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    )
+    return true
+  } catch (error) {
+    console.error('Failed to configure web-push:', error)
+    return false
+  }
+}
 
 export async function POST(request: NextRequest) {
+  if (!setupWebPush()) {
+    return NextResponse.json(
+      { error: 'Push notification service not configured' },
+      { status: 500 }
+    )
+  }
+
   try {
     const { userId, title, body, url, data, tag } = await request.json()
 
