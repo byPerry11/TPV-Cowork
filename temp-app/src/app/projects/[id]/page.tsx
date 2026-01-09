@@ -11,6 +11,7 @@ import { ManageMembersDialog } from "@/components/manage-members-dialog"
 import { FloatingNav } from "@/components/floating-nav"
 import { ProjectMembersList } from "@/components/project-members-list"
 import { LeaveProjectDialog } from "@/components/leave-project-dialog"
+import { DeleteProjectDialog } from "@/components/delete-project-dialog"
 import { Project } from "@/types"
 import { useProjectRole } from "@/hooks/use-project-role"
 
