@@ -190,38 +190,14 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ============================================
 -- SECTION 6: ANALYTICS VIEWS (OPTIONAL)
 -- ============================================
--- These materialized views improve dashboard performance.
+-- DEPRECATED: These views were causing SECURITY DEFINER warnings
+-- They have been moved to a separate optional migration
+-- Use supabase_analytics_views.sql if you need these views
 
--- User project statistics
-CREATE OR REPLACE VIEW user_project_stats AS
-SELECT 
-  pm.user_id,
-  COUNT(DISTINCT p.id) FILTER (WHERE p.status = 'active') as active_projects,
-  COUNT(DISTINCT p.id) FILTER (WHERE p.status = 'completed') as completed_projects,
-  COUNT(DISTINCT c.id) FILTER (WHERE c.is_completed = true) as completed_checkpoints,
-  COUNT(DISTINCT e.id) as evidences_submitted
-FROM project_members pm
-JOIN projects p ON pm.project_id = p.id
-LEFT JOIN checkpoints c ON p.id = c.project_id
-LEFT JOIN evidences e ON c.id = e.checkpoint_id AND e.user_id = pm.user_id
-WHERE pm.status = 'active'
-GROUP BY pm.user_id;
+-- NOTE: Views are intentionally commented out to prevent security warnings
+-- If you need these views, run supabase_analytics_views.sql separately
+-- after reviewing the security implications.
 
--- Project progress view
-CREATE OR REPLACE VIEW project_progress AS
-SELECT 
-  p.id as project_id,
-  p.title,
-  p.status,
-  COUNT(c.id) as total_checkpoints,
-  COUNT(c.id) FILTER (WHERE c.is_completed = true) as completed_checkpoints,
-  CASE 
-    WHEN COUNT(c.id) = 0 THEN 0
-    ELSE ROUND((COUNT(c.id) FILTER (WHERE c.is_completed = true)::numeric / COUNT(c.id)::numeric) * 100, 2)
-  END as progress_percentage
-FROM projects p
-LEFT JOIN checkpoints c ON p.id = c.project_id
-GROUP BY p.id, p.title, p.status;
 
 -- ============================================
 -- SECTION 7: UPDATED RLS POLICIES
