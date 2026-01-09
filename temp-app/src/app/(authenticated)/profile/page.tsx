@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
-import { Loader2, Edit, Users, FolderKanban, Award } from "lucide-react"
+import { Loader2, Edit, Users, FolderKanban, Award, LogOut } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -103,6 +103,12 @@ export default function ProfilePage() {
         }
     }
 
+    const handleLogout = async () => {
+        setLoading(true)
+        await supabase.auth.signOut()
+        router.push("/login")
+    }
+
     if (loading) {
         return (
             <div className="flex h-screen w-full items-center justify-center">
@@ -138,15 +144,26 @@ export default function ProfilePage() {
                                         <h1 className="text-2xl md:text-3xl font-bold">
                                             {profile.display_name || profile.username}
                                         </h1>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setIsEditMode(!isEditMode)}
-                                            className="w-full sm:w-auto"
-                                        >
-                                            <Edit className="h-4 w-4 mr-2" />
-                                            Edit Profile
-                                        </Button>
+                                        <div className="flex gap-2 w-full sm:w-auto">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setIsEditMode(!isEditMode)}
+                                                className="flex-1 sm:flex-none"
+                                            >
+                                                <Edit className="h-4 w-4 mr-2" />
+                                                Edit Profile
+                                            </Button>
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={handleLogout}
+                                                className="flex-1 sm:flex-none"
+                                            >
+                                                <LogOut className="h-4 w-4 mr-2" />
+                                                Logout
+                                            </Button>
+                                        </div>
                                     </div>
 
                                     {/* Stats */}
