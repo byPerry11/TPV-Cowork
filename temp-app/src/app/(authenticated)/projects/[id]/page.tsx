@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
-import { Loader2, ArrowLeft } from "lucide-react"
+import { Loader2, ArrowLeft, Pencil } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { CheckpointList } from "@/components/checkpoint-list"
 import { AddCheckpointDialog } from "@/components/add-checkpoint-dialog"
@@ -155,7 +156,14 @@ function ProjectDetailContent() {
           {/* Project Description at Top */}
           {project.description && (
             <div className="mb-6 p-4 bg-white dark:bg-card rounded-lg border shadow-sm">
-              <h3 className="font-semibold mb-2 text-primary">About Project</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-primary">About Project</h3>
+                {isOwner && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => toast.info("Edit functionality coming soon")}>
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                 {project.description}
               </p>
