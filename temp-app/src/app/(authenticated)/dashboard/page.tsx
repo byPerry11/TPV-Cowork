@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { Loader2 } from "lucide-react"
 
-import { FloatingNav } from "@/components/floating-nav"
 import { ProjectCard } from "@/components/project-card"
 import { CalendarWidget } from "@/components/calendar-widget"
 import { GlobalSearchBar } from "@/components/global-search-bar"
@@ -128,7 +127,6 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-      <FloatingNav />
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto">

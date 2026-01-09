@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Home, User, Bell, FolderKanban } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
 
 export function FloatingNav() {
   const pathname = usePathname()
@@ -20,27 +21,31 @@ export function FloatingNav() {
       <div className="flex md:flex-col items-center gap-2 p-3 rounded-2xl bg-background/80 backdrop-blur-lg border border-border shadow-lg">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href ||
-            (item.label === "Projects" && pathname.startsWith("/projects")) ||
-            (item.label === "Home" && pathname === "/dashboard")
+          const isActive =
+            (item.href === "/dashboard" && pathname === "/dashboard") ||
+            (item.href !== "/dashboard" && pathname.startsWith(item.href)) ||
+            (item.label === "Projects" && pathname.startsWith("/projects"))
 
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200",
-                "hover:bg-primary/10 hover:scale-110",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "text-muted-foreground"
+                "relative flex items-center justify-center w-12 h-12 rounded-xl transition-colors duration-200",
+                "hover:bg-primary/10",
+                isActive ? "text-primary-foreground" : "text-muted-foreground"
               )}
               title={item.label}
             >
-              <Icon className="h-5 w-5" />
               {isActive && (
-                <span className="absolute -right-1 -top-1 w-2 h-2 bg-primary rounded-full md:hidden" />
+                <motion.div
+                  layoutId="active-nav-pill"
+                  className="absolute inset-0 bg-primary rounded-xl shadow-md"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
               )}
+              <Icon className="h-5 w-5 relative z-10" />
             </Link>
           )
         })}

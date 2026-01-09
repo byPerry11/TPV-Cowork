@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { CheckpointList } from "@/components/checkpoint-list"
 import { AddCheckpointDialog } from "@/components/add-checkpoint-dialog"
 import { ManageMembersDialog } from "@/components/manage-members-dialog"
-import { FloatingNav } from "@/components/floating-nav"
 import { ProjectMembersList } from "@/components/project-members-list"
 import { LeaveProjectDialog } from "@/components/leave-project-dialog"
 import { DeleteProjectDialog } from "@/components/delete-project-dialog"
@@ -113,7 +112,6 @@ function ProjectDetailContent() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-      <FloatingNav />
 
       <div className="flex flex-1 flex-col">
         <header className="sticky top-0 z-10 border-b bg-white px-4 md:px-6 py-4 dark:bg-gray-950 flex flex-wrap items-center justify-between gap-4">

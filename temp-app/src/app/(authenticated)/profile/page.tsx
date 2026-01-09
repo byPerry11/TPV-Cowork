@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 
-import { FloatingNav } from "@/components/floating-nav"
 import { ProfileEditForm } from "@/components/profile-edit-form"
 import { AvatarUpload } from "@/components/avatar-upload"
 import { AchievementsDisplay } from "@/components/achievements-display"
@@ -115,10 +114,8 @@ export default function ProfilePage() {
     if (!profile || !userId) return null
 
     return (
-        <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-            <FloatingNav />
-
-            <main className="flex-1 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
+            <Card className="w-full max-w-4xl shadow-xl border-t-4 border-t-primary">
                 <div className="container mx-auto max-w-5xl p-4 md:p-6 space-y-6 pb-24 md:pb-6">
                     {/* Instagram-style Header */}
                     <Card>
@@ -264,7 +261,7 @@ export default function ProfilePage() {
                         </TabsContent>
                     </Tabs>
                 </div>
-            </main>
+            </Card>
         </div>
     )
 }
