@@ -306,6 +306,5 @@ export function FriendManager({ userId }: { userId: string }) {
                 </CardContent>
             </Card>
         </div>
-        </div >
     )
 }
