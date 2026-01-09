@@ -178,6 +178,7 @@ export function UserMultiSelect({ selectedUsers, onSelectionChange }: UserMultiS
                                     value={user.username || user.id}
                                     onSelect={() => toggleUser(user.id)}
                                     className="cursor-pointer"
+                                    disabled={false}
                                 >
                                     <div className="flex items-center gap-2 w-full">
                                         <div className={cn(
