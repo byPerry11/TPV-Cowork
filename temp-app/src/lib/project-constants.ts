@@ -7,6 +7,11 @@ export const ENGINEERING_CATEGORIES = [
     { value: 'industrial', label: 'Industrial', emoji: '🏭', color: '#14b8a6' },
     { value: 'aerospace', label: 'Aerospace', emoji: '✈️', color: '#06b6d4' },
     { value: 'biomedical', label: 'Biomedical', emoji: '🩺', color: '#ec4899' },
+    { value: 'monitoring', label: 'Monitorización', emoji: '📊', color: '#8b5cf6' },
+    { value: '3d_design', label: 'Diseño 3D', emoji: '🧊', color: '#ec4899' },
+    { value: 'maker', label: 'Maker', emoji: '🛠️', color: '#f97316' },
+    { value: 'optimization', label: 'Optimización', emoji: '📈', color: '#14b8a6' },
+    { value: 'continuous_improvement', label: 'Mejora Continua', emoji: '🔄', color: '#22c55e' },
     { value: 'other', label: 'Other', emoji: '📦', color: '#64748b' },
 ] as const
 
