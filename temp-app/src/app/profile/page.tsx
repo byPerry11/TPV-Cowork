@@ -197,12 +197,7 @@ export default function ProfilePage() {
                     {isEditMode && (
                         <Card>
                             <CardContent className="p-6">
-                                <ProfileEditForm
-                                    userId={userId}
-                                    currentProfile={profile}
-                                    onSuccess={handleProfileUpdated}
-                                    onCancel={() => setIsEditMode(false)}
-                                />
+                                <ProfileEditForm userId={userId} />
                             </CardContent>
                         </Card>
                     )}
