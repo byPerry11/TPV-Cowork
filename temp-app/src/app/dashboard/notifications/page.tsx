@@ -56,28 +56,41 @@ export default function NotificationsPage() {
     }, [router])
 
     const fetchNotifications = async (userId: string) => {
-        // Fetch friend requests
-        const { data: friendReqs } = await supabase
+        // Fetch friend requests - only IDs first
+        const { data: friendReqs, error: friendReqError } = await supabase
             .from("friend_requests")
-            .select(`
-        id,
-        sender_id,
-        created_at,
-        sender:sender_id (
-          display_name,
-          username,
-          avatar_url
-        )
-      `)
+            .select('id, sender_id, created_at')
             .eq("receiver_id", userId)
             .eq("status", "pending")
             .order("created_at", { ascending: false })
 
-        if (friendReqs) {
-            setFriendRequests(friendReqs as unknown as FriendRequest[])
+        if (friendReqError) {
+            console.error("Error fetching friend requests:", friendReqError)
         }
 
-        // Fetch project invitations
+        // Fetch sender profiles separately
+        if (friendReqs && friendReqs.length > 0) {
+            const senderIds = friendReqs.map(r => r.sender_id)
+            const { data: senderProfiles } = await supabase
+                .from("profiles")
+                .select('id, display_name, username, avatar_url')
+                .in('id', senderIds)
+
+            // Merge profiles with requests
+            const requestsWithProfiles = friendReqs.map(req => ({
+                ...req,
+                sender: senderProfiles?.find(p => p.id === req.sender_id) || {
+                    display_name: null,
+                    username: 'Unknown',
+                    avatar_url: null
+                }
+            }))
+            setFriendRequests(requestsWithProfiles as FriendRequest[])
+        } else {
+            setFriendRequests([])
+        }
+
+        // Fetch project invitations - this query should work fine
         const { data: projectInvites } = await supabase
             .from("project_members")
             .select(`

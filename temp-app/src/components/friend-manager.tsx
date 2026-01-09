@@ -33,41 +33,69 @@ export function FriendManager({ userId }: { userId: string }) {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            // 1. Fetch Requests (received)
+            // 1. Fetch Requests (received) - only IDs first
             const { data: reqData, error: reqError } = await supabase
                 .from('friend_requests')
-                .select(`
-                    id, sender_id, receiver_id, status,
-                    sender:sender_id(id, username, display_name, avatar_url),
-                    receiver:receiver_id(id, username, display_name, avatar_url)
-                `)
+                .select('id, sender_id, receiver_id, status, created_at')
                 .eq('receiver_id', userId)
                 .eq('status', 'pending')
-            
-            if (reqError) throw reqError
-            setRequests(reqData as any)
 
-            // 2. Fetch Friends (accepted requests where I am sender OR receiver)
-            // Supabase OR query for friends is tricky in one go if we want to join profiles properly 
-            // without complex views. 
-            // Easier approach: Get all accepted requests involving me, then filter.
+            if (reqError) throw reqError
+
+            // 2. Fetch sender profiles separately
+            if (reqData && reqData.length > 0) {
+                const senderIds = reqData.map(r => r.sender_id)
+                const { data: senderProfiles } = await supabase
+                    .from('profiles')
+                    .select('id, username, display_name, avatar_url')
+                    .in('id', senderIds)
+
+                // Merge profiles with requests
+                const requestsWithProfiles = reqData.map(req => ({
+                    ...req,
+                    sender: senderProfiles?.find(p => p.id === req.sender_id) || {
+                        id: req.sender_id,
+                        username: 'Unknown',
+                        display_name: null,
+                        avatar_url: null
+                    },
+                    receiver: { id: userId, username: null, display_name: null, avatar_url: null }
+                }))
+                setRequests(requestsWithProfiles as any)
+            } else {
+                setRequests([])
+            }
+
+            // 3. Fetch Friends (accepted requests) - only IDs first
             const { data: friendData, error: friendError } = await supabase
                 .from('friend_requests')
-                .select(`
-                    id, sender_id, receiver_id, status,
-                    sender:sender_id(id, username, display_name, avatar_url),
-                    receiver:receiver_id(id, username, display_name, avatar_url)
-                `)
+                .select('id, sender_id, receiver_id, status')
                 .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
                 .eq('status', 'accepted')
 
             if (friendError) throw friendError
 
-             const myFriends = friendData.map((f: any) => {
-                if (f.sender_id === userId) return f.receiver
-                return f.sender
+            // 4. Get unique friend IDs (exclude current user)
+            const friendIds = new Set<string>()
+            friendData?.forEach((f: any) => {
+                if (f.sender_id === userId) {
+                    friendIds.add(f.receiver_id)
+                } else {
+                    friendIds.add(f.sender_id)
+                }
             })
-            setFriends(myFriends)
+
+            // 5. Fetch friend profiles
+            if (friendIds.size > 0) {
+                const { data: friendProfiles } = await supabase
+                    .from('profiles')
+                    .select('id, username, display_name, avatar_url')
+                    .in('id', Array.from(friendIds))
+
+                setFriends(friendProfiles || [])
+            } else {
+                setFriends([])
+            }
 
         } catch (error: any) {
             console.error("Error fetching friends", error)
@@ -127,7 +155,7 @@ export function FriendManager({ userId }: { userId: string }) {
                             requests.map((req) => (
                                 <div key={req.id} className="flex items-center justify-between p-2 border rounded-md">
                                     <div className="flex items-center gap-3">
-                                         <Avatar className="h-8 w-8">
+                                        <Avatar className="h-8 w-8">
                                             <AvatarImage src={req.sender.avatar_url || ""} />
                                             <AvatarFallback><User className="h-3 w-3" /></AvatarFallback>
                                         </Avatar>
@@ -156,7 +184,7 @@ export function FriendManager({ userId }: { userId: string }) {
                         <CardTitle>My Friends</CardTitle>
                     </CardHeader>
                     <CardContent>
-                         {loading && friends.length === 0 ? (
+                        {loading && friends.length === 0 ? (
                             <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
                         ) : friends.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-4">No friends added yet.</p>
