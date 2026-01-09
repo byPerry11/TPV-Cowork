@@ -6,12 +6,13 @@ import { supabase } from "@/lib/supabaseClient"
 import { Loader2, Edit, Users, FolderKanban, Award } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 
 import { FloatingNav } from "@/components/floating-nav"
 import { ProfileEditForm } from "@/components/profile-edit-form"
+import { AvatarUpload } from "@/components/avatar-upload"
 import { AchievementsDisplay } from "@/components/achievements-display"
 import { FriendManager } from "@/components/friend-manager"
 
@@ -196,7 +197,29 @@ export default function ProfilePage() {
                     {/* Edit Profile Form (Collapsible) */}
                     {isEditMode && (
                         <Card>
-                            <CardContent className="p-6">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <CardTitle>Edit Profile</CardTitle>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            setIsEditMode(false)
+                                            if (userId) fetchProfile(userId)
+                                        }}
+                                    >
+                                        Close
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {/* Avatar Upload Section */}
+                                <div className="flex flex-col items-center gap-4 pb-6 border-b">
+                                    <h3 className="text-sm font-medium">Profile Picture</h3>
+                                    <AvatarUpload userId={userId} />
+                                </div>
+
+                                {/* Profile Edit Form */}
                                 <ProfileEditForm userId={userId} />
                             </CardContent>
                         </Card>
