@@ -24,10 +24,19 @@ interface FriendRequest {
     receiver: Profile
 }
 
+interface SentRequest {
+    id: string
+    sender_id: string
+    receiver_id: string
+    status: 'pending' | 'accepted' | 'rejected'
+    receiver: Profile
+}
+
 export function FriendManager({ userId }: { userId: string }) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [friends, setFriends] = useState<Profile[]>([])
     const [requests, setRequests] = useState<FriendRequest[]>([])
+    const [sentRequests, setSentRequests] = useState<SentRequest[]>([])
     const [loading, setLoading] = useState(true)
 
     const fetchData = useCallback(async () => {
@@ -64,6 +73,38 @@ export function FriendManager({ userId }: { userId: string }) {
                 setRequests(requestsWithProfiles as any)
             } else {
                 setRequests([])
+            }
+
+            // 2b. Fetch Sent Requests (where user is sender)
+            const { data: sentData, error: sentError } = await supabase
+                .from('friend_requests')
+                .select('id, sender_id, receiver_id, status, created_at')
+                .eq('sender_id', userId)
+                .eq('status', 'pending')
+
+            if (sentError) throw sentError
+
+            // Fetch receiver profiles separately
+            if (sentData && sentData.length > 0) {
+                const receiverIds = sentData.map(r => r.receiver_id)
+                const { data: receiverProfiles } = await supabase
+                    .from('profiles')
+                    .select('id, username, display_name, avatar_url')
+                    .in('id', receiverIds)
+
+                // Merge profiles with sent requests
+                const sentWithProfiles = sentData.map(req => ({
+                    ...req,
+                    receiver: receiverProfiles?.find(p => p.id === req.receiver_id) || {
+                        id: req.receiver_id,
+                        username: 'Unknown',
+                        display_name: null,
+                        avatar_url: null
+                    }
+                }))
+                setSentRequests(sentWithProfiles as SentRequest[])
+            } else {
+                setSentRequests([])
             }
 
             // 3. Fetch Friends (accepted requests) - only IDs first
@@ -124,6 +165,21 @@ export function FriendManager({ userId }: { userId: string }) {
         }
     }
 
+    const cancelRequest = async (requestId: string) => {
+        try {
+            const { error } = await supabase
+                .from('friend_requests')
+                .delete()
+                .eq('id', requestId)
+
+            if (error) throw error
+            toast.success("Request cancelled")
+            fetchData() // Reload lists
+        } catch (error: any) {
+            toast.error("Failed to cancel request")
+        }
+    }
+
     return (
         <div className="space-y-6">
             {/* Search Section */}
@@ -138,11 +194,11 @@ export function FriendManager({ userId }: { userId: string }) {
             </Card>
 
             <div className="grid md:grid-cols-2 gap-6">
-                {/* Pending Requests */}
+                {/* Pending Requests (Received) */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center justify-between">
-                            Pending Requests
+                            Received Requests
                             {requests.length > 0 && <Badge variant="destructive">{requests.length}</Badge>}
                         </CardTitle>
                     </CardHeader>
@@ -178,35 +234,78 @@ export function FriendManager({ userId }: { userId: string }) {
                     </CardContent>
                 </Card>
 
-                {/* Friends List */}
+                {/* Sent Requests (Pending) */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>My Friends</CardTitle>
+                        <CardTitle className="flex items-center justify-between">
+                            Sent Requests
+                            {sentRequests.length > 0 && <Badge variant="secondary">{sentRequests.length}</Badge>}
+                        </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        {loading && friends.length === 0 ? (
+                    <CardContent className="space-y-4">
+                        {loading && sentRequests.length === 0 ? (
                             <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
-                        ) : friends.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">No friends added yet.</p>
+                        ) : sentRequests.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">No pending sent requests.</p>
                         ) : (
-                            <div className="space-y-2">
-                                {friends.map((friend) => (
-                                    <div key={friend.id} className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-md">
-                                        <Avatar>
-                                            <AvatarImage src={friend.avatar_url || ""} />
-                                            <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+                            sentRequests.map((req) => (
+                                <div key={req.id} className="flex items-center justify-between p-2 border rounded-md">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={req.receiver.avatar_url || ""} />
+                                            <AvatarFallback><User className="h-3 w-3" /></AvatarFallback>
                                         </Avatar>
                                         <div className="flex flex-col">
-                                            <span className="font-medium">{friend.display_name || friend.username}</span>
-                                            <span className="text-xs text-muted-foreground">@{friend.username}</span>
+                                            <span className="text-sm font-medium">{req.receiver.display_name || req.receiver.username}</span>
+                                            <span className="text-xs text-muted-foreground">@{req.receiver.username}</span>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="flex gap-1">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-xs text-orange-600 hover:text-orange-700"
+                                            onClick={() => cancelRequest(req.id)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))
                         )}
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Friends List */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>My Friends</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {loading && friends.length === 0 ? (
+                        <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
+                    ) : friends.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">No friends added yet.</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {friends.map((friend) => (
+                                <div key={friend.id} className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-md">
+                                    <Avatar>
+                                        <AvatarImage src={friend.avatar_url || ""} />
+                                        <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">{friend.display_name || friend.username}</span>
+                                        <span className="text-xs text-muted-foreground">@{friend.username}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
+        </div >
     )
 }
