@@ -141,7 +141,9 @@ function ProjectDetailContent() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {!isOwner && (
+            {isOwner ? (
+              <DeleteProjectDialog projectId={project.id} projectTitle={project.title} />
+            ) : (
               <LeaveProjectDialog projectId={project.id} projectTitle={project.title} />
             )}
             <ManageMembersDialog projectId={project.id} />
