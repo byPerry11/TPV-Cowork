@@ -153,6 +153,16 @@ function ProjectDetailContent() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6">
+          {/* Project Description at Top */}
+          {project.description && (
+            <div className="mb-6 p-4 bg-white dark:bg-card rounded-lg border shadow-sm">
+              <h3 className="font-semibold mb-2 text-primary">About Project</h3>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                {project.description}
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
             {/* Checkpoints Column */}
             <div className="lg:col-span-3 space-y-6">
@@ -167,16 +177,6 @@ function ProjectDetailContent() {
             {/* Sidebar Column */}
             <div className="lg:col-span-1 space-y-6">
               <ProjectMembersList members={members} currentUserId={currentUserId} />
-
-              {/* Additional project details could go here */}
-              {project.description && (
-                <div className="p-4 bg-white dark:bg-card rounded-lg border shadow-sm">
-                  <h3 className="font-semibold mb-2">About Project</h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {project.description}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </main>
