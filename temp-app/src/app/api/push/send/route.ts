@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint to process queued notifications
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
