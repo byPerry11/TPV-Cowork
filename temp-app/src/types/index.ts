@@ -20,6 +20,12 @@ export interface Project {
   id: string
   owner_id: string
   title: string
+  description?: string | null
+  category?: string | null
+  color?: string | null
+  project_icon?: string | null
+  tags?: string[]
+  is_public?: boolean
   start_date: string
   end_date: string | null
   max_users: number
@@ -28,11 +34,14 @@ export interface Project {
 }
 
 export type Role = 'admin' | 'manager' | 'member'
+export type MemberStatus = 'pending' | 'active' | 'rejected' | 'left'
 
 export interface ProjectMember {
   project_id: string
   user_id: string
   role: Role
+  status: MemberStatus
+  member_color?: string
   joined_at: string
 }
 
