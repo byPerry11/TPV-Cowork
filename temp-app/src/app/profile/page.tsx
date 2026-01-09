@@ -1,162 +1,252 @@
 "use client"
 
 import { useEffect, useState, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
-import { Loader2, User, Award, ArrowLeft, UsersRound, LogOut } from "lucide-react"
+import { Loader2, Edit, Users, FolderKanban, Award } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ProfileEditForm } from "@/components/profile-edit-form"
-import { AvatarUpload } from "@/components/avatar-upload"
-import { AchievementsDisplay } from "@/components/achievements-display"
-import { UserInfo } from "@/components/user-info"
-import { FloatingNav } from "@/components/floating-nav"
-import { FriendManager } from "@/components/friend-manager"
-import { toast } from "sonner"
+import { Card, CardContent } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 
-function ProfileContent() {
+import { FloatingNav } from "@/components/floating-nav"
+import { ProfileEditForm } from "@/components/profile-edit-form"
+import { AchievementsDisplay } from "@/components/achievements-display"
+import { FriendManager } from "@/components/friend-manager"
+
+export default function ProfilePage() {
     const router = useRouter()
-    const searchParams = useSearchParams()
-    const defaultTab = searchParams.get('tab') || 'profile'
-    const [userId, setUserId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
+    const [userId, setUserId] = useState<string | null>(null)
+    const [isEditMode, setIsEditMode] = useState(false)
+
+    const [profile, setProfile] = useState<{
+        username: string
+        display_name: string | null
+        avatar_url: string | null
+        bio?: string | null
+    } | null>(null)
+
+    const [stats, setStats] = useState({
+        projects: 0,
+        friends: 0,
+        achievements: 0
+    })
 
     useEffect(() => {
-        const getUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-                router.push('/login')
+        const checkUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) {
+                router.push("/login")
                 return
             }
-            setUserId(user.id)
+            setUserId(session.user.id)
+            await fetchProfile(session.user.id)
+            await fetchStats(session.user.id)
             setLoading(false)
         }
-        getUser()
+        checkUser()
     }, [router])
+
+    const fetchProfile = async (uid: string) => {
+        const { data } = await supabase
+            .from("profiles")
+            .select("username, display_name, avatar_url")
+            .eq("id", uid)
+            .single()
+
+        if (data) {
+            setProfile(data)
+        }
+    }
+
+    const fetchStats = async (uid: string) => {
+        // Count projects
+        const { count: projectCount } = await supabase
+            .from("project_members")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", uid)
+            .eq("status", "active")
+
+        // Count friends (accepted friend requests)
+        const { count: friendCount } = await supabase
+            .from("friend_requests")
+            .select("*", { count: "exact", head: true })
+            .or(`sender_id.eq.${uid},receiver_id.eq.${uid}`)
+            .eq("status", "accepted")
+
+        // Count achievements
+        const { count: achievementCount } = await supabase
+            .from("user_achievements")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", uid)
+
+        setStats({
+            projects: projectCount || 0,
+            friends: friendCount || 0,
+            achievements: achievementCount || 0
+        })
+    }
+
+    const getInitials = () => {
+        if (profile?.display_name) {
+            return profile.display_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+        }
+        return profile?.username?.slice(0, 2).toUpperCase() || "U"
+    }
+
+    const handleProfileUpdated = () => {
+        if (userId) {
+            fetchProfile(userId)
+            setIsEditMode(false)
+        }
+    }
 
     if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center">
+            <div className="flex h-screen w-full items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         )
     }
 
-    const handleLogout = async () => {
-        const { error } = await supabase.auth.signOut()
-        if (error) {
-            toast.error("Error signing out")
-        } else {
-            router.push("/login")
-        }
-    }
+    if (!profile || !userId) return null
 
     return (
         <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
             <FloatingNav />
 
             <main className="flex-1 overflow-y-auto">
-                <div className="container mx-auto p-4 md:p-6 space-y-6 md:space-y-8 max-w-4xl pb-24 md:pb-6">
-                    {/* Header */}
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1">
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Mi Perfil</h1>
-                            <p className="text-sm md:text-base text-muted-foreground">
-                                Gestiona tu información personal y logros
-                            </p>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button variant="outline" onClick={() => router.push("/dashboard")} className="hidden sm:flex">
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Volver al Home
-                            </Button>
-                            <Button variant="outline" size="icon" onClick={() => router.push("/dashboard")} className="sm:hidden">
-                                <ArrowLeft className="h-4 w-4" />
-                            </Button>
-                            <Button variant="destructive" onClick={handleLogout} className="hidden sm:flex">
-                                <LogOut className="mr-2 h-4 w-4" />
-                                Cerrar Sesión
-                            </Button>
-                            <Button variant="destructive" size="icon" onClick={handleLogout} className="sm:hidden">
-                                <LogOut className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
+                <div className="container mx-auto max-w-5xl p-4 md:p-6 space-y-6 pb-24 md:pb-6">
+                    {/* Instagram-style Header */}
+                    <Card>
+                        <CardContent className="p-6 md:p-8">
+                            <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+                                {/* Avatar */}
+                                <div className="flex justify-center md:justify-start">
+                                    <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-primary/20">
+                                        <AvatarImage src={profile.avatar_url || undefined} alt={profile.display_name || profile.username} />
+                                        <AvatarFallback className="text-4xl font-bold bg-primary/10 text-primary">
+                                            {getInitials()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </div>
 
-                    {/* Tabs */}
-                    <Tabs defaultValue="profile" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="profile">
-                                <User className="mr-2 h-4 w-4" />
-                                Perfil
+                                {/* Profile Info */}
+                                <div className="flex-1 space-y-4">
+                                    {/* Username & Edit Button */}
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                                        <h1 className="text-2xl md:text-3xl font-bold">
+                                            {profile.display_name || profile.username}
+                                        </h1>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setIsEditMode(!isEditMode)}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            <Edit className="h-4 w-4 mr-2" />
+                                            Edit Profile
+                                        </Button>
+                                    </div>
+
+                                    {/* Stats */}
+                                    <div className="flex gap-6 md:gap-8">
+                                        <div className="flex flex-col items-center sm:items-start">
+                                            <span className="text-xl md:text-2xl font-bold">{stats.projects}</span>
+                                            <span className="text-sm text-muted-foreground">Projects</span>
+                                        </div>
+                                        <div className="flex flex-col items-center sm:items-start">
+                                            <span className="text-xl md:text-2xl font-bold">{stats.friends}</span>
+                                            <span className="text-sm text-muted-foreground">Friends</span>
+                                        </div>
+                                        <div className="flex flex-col items-center sm:items-start">
+                                            <span className="text-xl md:text-2xl font-bold">{stats.achievements}</span>
+                                            <span className="text-sm text-muted-foreground">Achievements</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Display name and username */}
+                                    <div className="space-y-1">
+                                        {profile.display_name && (
+                                            <p className="font-semibold">{profile.display_name}</p>
+                                        )}
+                                        <p className="text-sm text-muted-foreground">@{profile.username}</p>
+                                    </div>
+
+                                    {/* Badges */}
+                                    <div className="flex flex-wrap gap-2">
+                                        <Badge variant="secondary" className="flex items-center gap-1">
+                                            <FolderKanban className="h-3 w-3" />
+                                            Active Member
+                                        </Badge>
+                                        {stats.achievements > 0 && (
+                                            <Badge variant="secondary" className="flex items-center gap-1 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400">
+                                                <Award className="h-3 w-3" />
+                                                {stats.achievements} Achievements
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Edit Profile Form (Collapsible) */}
+                    {isEditMode && (
+                        <Card>
+                            <CardContent className="p-6">
+                                <ProfileEditForm
+                                    userId={userId}
+                                    currentProfile={profile}
+                                    onSuccess={handleProfileUpdated}
+                                    onCancel={() => setIsEditMode(false)}
+                                />
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Tabs for Content */}
+                    <Tabs defaultValue="achievements" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 lg:w-auto">
+                            <TabsTrigger value="achievements" className="flex items-center gap-2">
+                                <Award className="h-4 w-4" />
+                                <span className="hidden sm:inline">Achievements</span>
+                                <span className="sm:hidden">Awards</span>
                             </TabsTrigger>
-                            <TabsTrigger value="achievements">
-                                <Award className="mr-2 h-4 w-4" />
-                                Logros
-                            </TabsTrigger>
-                            <TabsTrigger value="friends">
-                                <UsersRound className="mr-2 h-4 w-4" />
-                                Amigos
+                            <TabsTrigger value="friends" className="flex items-center gap-2">
+                                <Users className="h-4 w-4" />
+                                Friends
                             </TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="profile" className="space-y-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Foto de Perfil</CardTitle>
-                                    <CardDescription>
-                                        Sube o actualiza tu foto de perfil
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {userId && <AvatarUpload userId={userId} />}
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Información de Cuenta</CardTitle>
-                                    <CardDescription>
-                                        Detalles de tu cuenta
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                    {userId && <UserInfo userId={userId} />}
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Información Personal</CardTitle>
-                                    <CardDescription>
-                                        Actualiza tu nombre de usuario y nombre para mostrar
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {userId && <ProfileEditForm userId={userId} />}
-                                </CardContent>
-                            </Card>
+                        <TabsContent value="achievements" className="mt-6">
+                            <Suspense
+                                fallback={
+                                    <div className="flex justify-center p-8">
+                                        <Loader2 className="h-6 w-6 animate-spin" />
+                                    </div>
+                                }
+                            >
+                                <AchievementsDisplay userId={userId} />
+                            </Suspense>
                         </TabsContent>
 
-                        <TabsContent value="achievements">
-                            {userId && <AchievementsDisplay userId={userId} />}
-                        </TabsContent>
-
-                        <TabsContent value="friends">
-                            {userId && <FriendManager userId={userId} />}
+                        <TabsContent value="friends" className="mt-6">
+                            <Suspense
+                                fallback={
+                                    <div className="flex justify-center p-8">
+                                        <Loader2 className="h-6 w-6 animate-spin" />
+                                    </div>
+                                }
+                            >
+                                <FriendManager userId={userId} />
+                            </Suspense>
                         </TabsContent>
                     </Tabs>
                 </div>
             </main>
         </div>
-    )
-}
-
-export default function ProfilePage() {
-    return (
-        <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
-            <ProfileContent />
-        </Suspense>
     )
 }
