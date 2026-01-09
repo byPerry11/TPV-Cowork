@@ -14,9 +14,13 @@ import { UserAvatarMenu } from "@/components/user-avatar-menu"
 interface UserProject {
   id: string
   title: string
+  description?: string | null
+  category?: string | null
+  color?: string | null
+  project_icon?: string | null
   status: "active" | "completed" | "archived"
   role: "admin" | "manager" | "member"
-  checkpoints: Array<{ is_completed: boolean }>
+  progress: number
   memberCount: number
 }
 
