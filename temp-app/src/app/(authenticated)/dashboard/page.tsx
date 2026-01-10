@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { Loader2 } from "lucide-react"
@@ -39,6 +39,81 @@ export default function DashboardPage() {
   const [hasNotifications, setHasNotifications] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
   const { handleProjectInvitation } = useNotifications()
+
+  const fetchProjects = useCallback(async (userId: string) => {
+    // Note: We don't set loading(true) here to avoid flickering on refresh
+    const { data: projectMembers } = await supabase
+      .from("project_members")
+      .select(`
+            project_id,
+            role,
+            status,
+            project:project_id (
+                id,
+                title,
+                category,
+                description,
+                color,
+                project_icon,
+                status,
+                owner_id
+            )
+        `)
+      .eq("user_id", userId)
+      .in("status", ["active", "pending"])
+
+    if (!projectMembers) {
+      setProjects([])
+      return
+    }
+
+    // For each project, get checkpoints and calculate progress
+    const projectsWithProgress = await Promise.all(
+      projectMembers
+        .map(async (member) => {
+          const project = member.project as any || {}
+
+          let progress = 0
+          let memberCount = 0
+
+          if (project.id) {
+            const { data: checkpoints } = await supabase
+              .from("checkpoints")
+              .select("is_completed")
+              .eq("project_id", project.id)
+
+            const total = checkpoints?.length || 0
+            const completed = checkpoints?.filter(c => c.is_completed).length || 0
+            progress = total > 0 ? (completed / total) * 100 : 0
+
+            // Count members
+            const { count } = await supabase
+              .from("project_members")
+              .select("*", { count: "exact", head: true })
+              .eq("project_id", project.id)
+              .eq("status", "active")
+            memberCount = count || 0
+          }
+
+          return {
+            id: project.id || member.project_id,
+            title: project.title || "Private Project",
+            description: project.description,
+            category: project.category,
+            color: project.color,
+            project_icon: project.project_icon || "🔒",
+            status: project.status || "active",
+            owner_id: project.owner_id || "unknown",
+            role: member.role,
+            progress,
+            memberCount,
+            membershipStatus: member.status
+          } as UserProject
+        })
+    )
+
+    setProjects(projectsWithProgress)
+  }, [])
 
   useEffect(() => {
     const checkDesktop = () => setIsDesktop(window.innerWidth >= 768)
@@ -86,93 +161,22 @@ export default function DashboardPage() {
       }
       checkNotifications()
 
-      const fetchProjects = async (userId: string) => {
-        const { data: projectMembers } = await supabase
-          .from("project_members")
-          .select(`
-                project_id,
-                role,
-                status,
-                project:project_id (
-                    id,
-                    title,
-                    category,
-                    description,
-                    color,
-                    project_icon,
-                    status,
-                    owner_id
-                )
-            `)
-          .eq("user_id", userId)
-          .in("status", ["active", "pending"])
-
-        if (!projectMembers) return []
-
-        // For each project, get checkpoints and calculate progress
-        const projectsWithProgress = await Promise.all(
-          projectMembers
-            .map(async (member) => {
-              const project = member.project as any || {}
-              // Handle RLS restricted projects (if project is empty/null, use placeholders)
-              const projectId = project.id || member.project // fallbacks if possible, but member.project_id isnt selected above, wait... 
-              // The select above was: project:project_id (...). 
-              // If project is null, we can't get ID easily unless we select project_id explicitly.
-              // Let's assume for now valid projects or handle gracefully.
-              // Actually, I should update the SELECT to include project_id as a direct column to be safe.
-
-              let progress = 0
-              let memberCount = 0
-
-              if (project.id) {
-                const { data: checkpoints } = await supabase
-                  .from("checkpoints")
-                  .select("is_completed")
-                  .eq("project_id", project.id)
-
-                const total = checkpoints?.length || 0
-                const completed = checkpoints?.filter(c => c.is_completed).length || 0
-                progress = total > 0 ? (completed / total) * 100 : 0
-
-                // Count members
-                const { count } = await supabase
-                  .from("project_members")
-                  .select("*", { count: "exact", head: true })
-                  .eq("project_id", project.id)
-                  .eq("status", "active")
-                memberCount = count || 0
-              }
-
-              return {
-                id: project.id || member.project_id,
-                title: project.title || "Private Project",
-                description: project.description,
-                category: project.category,
-                color: project.color,
-                project_icon: project.project_icon || "🔒",
-                status: project.status || "active",
-                owner_id: project.owner_id || "unknown",
-                role: member.role,
-                progress,
-                memberCount,
-                membershipStatus: member.status
-              } as UserProject
-            })
-        )
-
-        setProjects(projectsWithProgress)
-      }
       await fetchProjects(session.user.id)
-
-      setLoading(false)
     }
     checkUser()
-  }, [router])
+  }, [router, fetchProjects])
 
   const calculateProgress = (checkpoints: Array<{ is_completed: boolean }>) => {
     if (checkpoints.length === 0) return 0
     const completed = checkpoints.filter(c => c.is_completed).length
     return (completed / checkpoints.length) * 100
+  }
+
+  const handleInvitationResponse = async (projectId: string, accept: boolean) => {
+    await handleProjectInvitation(projectId, accept)
+    if (sessionUserId) {
+      fetchProjects(sessionUserId)
+    }
   }
 
   if (loading) {
@@ -316,7 +320,7 @@ export default function DashboardPage() {
                           status={project.status}
                           memberCount={project.memberCount}
                           membershipStatus={project.membershipStatus}
-                          onRespond={(accept) => handleProjectInvitation(project.id, accept)}
+                          onRespond={(accept) => handleInvitationResponse(project.id, accept)}
                         />
                       ))}
                   </div>
