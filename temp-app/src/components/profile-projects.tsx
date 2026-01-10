@@ -19,7 +19,8 @@ export function ProfileProjects({ userId }: { userId: string }) {
 
     useEffect(() => {
         const fetchProjects = async () => {
-            const { data } = await supabase
+            // 1. Fetch memberships (existing logic)
+            const { data: memberData } = await supabase
                 .from('project_members')
                 .select(`
                     role,
@@ -32,19 +33,43 @@ export function ProfileProjects({ userId }: { userId: string }) {
                 .eq('user_id', userId)
                 .eq('status', 'active')
 
-            if (data) {
-                // Filter out projects that RLS hid (null project relation)
+            // 2. Fetch owned projects explicitly
+            const { data: ownedData } = await supabase
+                .from('projects')
+                .select('id, title, status')
+                .eq('owner_id', userId)
+
+            let combined: ProjectParticipation[] = []
+
+            // Process memberships
+            if (memberData) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const mapped = data
-                    .filter((d: any) => d.project) // <--- Safety check
+                const fromMembers = memberData
+                    .filter((d: any) => d.project)
                     .map((d: any) => ({
                         id: d.project.id,
                         title: d.project.title,
                         status: d.project.status,
                         role: d.role
                     }))
-                setProjects(mapped)
+                combined = [...combined, ...fromMembers]
             }
+
+            // Process owned projects
+            if (ownedData) {
+                const fromOwned = ownedData.map(p => ({
+                    id: p.id,
+                    title: p.title,
+                    status: p.status,
+                    role: 'admin' // Owner is always admin
+                }))
+                combined = [...combined, ...fromOwned]
+            }
+
+            // Deduplicate by ID
+            const unique = Array.from(new Map(combined.map(item => [item.id, item])).values())
+
+            setProjects(unique)
             setLoading(false)
         }
         fetchProjects()
