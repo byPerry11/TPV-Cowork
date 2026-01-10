@@ -12,6 +12,7 @@ import { Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { NotificationsList } from "@/components/notifications-list"
+import { useNotifications } from "@/hooks/useNotifications"
 
 interface UserProject {
   id: string
@@ -25,6 +26,7 @@ interface UserProject {
   progress: number
   memberCount: number
   owner_id: string
+  membershipStatus?: "active" | "pending" | "rejected"
 }
 
 export default function DashboardPage() {
@@ -36,6 +38,7 @@ export default function DashboardPage() {
   const [sessionUserId, setSessionUserId] = useState<string>("")
   const [hasNotifications, setHasNotifications] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
+  const { handleProjectInvitation } = useNotifications()
 
   useEffect(() => {
     const checkDesktop = () => setIsDesktop(window.innerWidth >= 768)
@@ -87,6 +90,7 @@ export default function DashboardPage() {
         const { data: projectMembers } = await supabase
           .from("project_members")
           .select(`
+                project_id,
                 role,
                 status,
                 project:project_id (
@@ -101,43 +105,58 @@ export default function DashboardPage() {
                 )
             `)
           .eq("user_id", userId)
-          .eq("status", "active")
+          .in("status", ["active", "pending"])
 
         if (!projectMembers) return []
 
         // For each project, get checkpoints and calculate progress
         const projectsWithProgress = await Promise.all(
           projectMembers
-            .filter(pm => pm.project && typeof pm.project === 'object')
             .map(async (member) => {
-              const project = member.project as any
-              const { data: checkpoints } = await supabase
-                .from("checkpoints")
-                .select("is_completed")
-                .eq("project_id", project.id)
+              const project = member.project as any || {}
+              // Handle RLS restricted projects (if project is empty/null, use placeholders)
+              const projectId = project.id || member.project // fallbacks if possible, but member.project_id isnt selected above, wait... 
+              // The select above was: project:project_id (...). 
+              // If project is null, we can't get ID easily unless we select project_id explicitly.
+              // Let's assume for now valid projects or handle gracefully.
+              // Actually, I should update the SELECT to include project_id as a direct column to be safe.
 
-              const total = checkpoints?.length || 0
-              const completed = checkpoints?.filter(c => c.is_completed).length || 0
-              const progress = total > 0 ? (completed / total) * 100 : 0
+              let progress = 0
+              let memberCount = 0
 
-              // Count members
-              const { count } = await supabase
-                .from("project_members")
-                .select("*", { count: "exact", head: true })
-                .eq("project_id", project.id)
-                .eq("status", "active")
+              if (project.id) {
+                const { data: checkpoints } = await supabase
+                  .from("checkpoints")
+                  .select("is_completed")
+                  .eq("project_id", project.id)
+
+                const total = checkpoints?.length || 0
+                const completed = checkpoints?.filter(c => c.is_completed).length || 0
+                progress = total > 0 ? (completed / total) * 100 : 0
+
+                // Count members
+                const { count } = await supabase
+                  .from("project_members")
+                  .select("*", { count: "exact", head: true })
+                  .eq("project_id", project.id)
+                  .eq("status", "active")
+                memberCount = count || 0
+              }
 
               return {
-                ...project,
+                id: project.id || member.project_id,
+                title: project.title || "Private Project",
+                description: project.description,
+                category: project.category,
+                color: project.color,
+                project_icon: project.project_icon || "🔒",
+                status: project.status || "active",
+                owner_id: project.owner_id || "unknown",
                 role: member.role,
                 progress,
-                memberCount: count || 0,
-                category: project.category,
-                description: project.description,
-                color: project.color,
-                project_icon: project.project_icon,
-                owner_id: project.owner_id
-              }
+                memberCount,
+                membershipStatus: member.status
+              } as UserProject
             })
         )
 
@@ -227,7 +246,6 @@ export default function DashboardPage() {
           {/* Projects Grid + Calendar */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Projects Grid - Takes 2 columns on large screens */}
-            {/* Projects Grid - Takes 2 columns on large screens */}
             <div className="lg:col-span-2 space-y-8">
 
               {/* Owned Projects Section */}
@@ -297,6 +315,8 @@ export default function DashboardPage() {
                           role={project.role}
                           status={project.status}
                           memberCount={project.memberCount}
+                          membershipStatus={project.membershipStatus}
+                          onRespond={(accept) => handleProjectInvitation(project.id, accept)}
                         />
                       ))}
                   </div>

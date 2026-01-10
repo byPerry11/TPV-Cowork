@@ -18,6 +18,8 @@ interface ProjectCardProps {
     role: "admin" | "manager" | "member"
     status: "active" | "completed" | "archived"
     memberCount?: number
+    membershipStatus?: "active" | "pending" | "rejected"
+    onRespond?: (accept: boolean) => void
 }
 
 export function ProjectCard({
@@ -30,8 +32,11 @@ export function ProjectCard({
     progress,
     role,
     status,
-    memberCount = 1
+    memberCount = 1,
+    membershipStatus = "active",
+    onRespond
 }: ProjectCardProps) {
+    const isPending = membershipStatus === "pending"
     const roleColors = {
         admin: "bg-purple-500",
         manager: "bg-blue-500",
@@ -50,10 +55,43 @@ export function ProjectCard({
     return (
         <Link href={`/projects/${id}`}>
             <Card
-                className="hover:shadow-lg transition-all duration-200 cursor-pointer border-l-4 h-full"
-                style={{ borderLeftColor: color || undefined }}
+                className={`transition-all duration-200 cursor-pointer border-l-4 h-full relative group ${isPending ? 'border-l-gray-300 opacity-90' : 'hover:shadow-lg'}`}
+                style={{ borderLeftColor: isPending ? undefined : (color || undefined) }}
             >
-                <CardContent className="p-4 space-y-3">
+                {/* Pending Notification Dot */}
+                {isPending && (
+                    <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 border-2 border-background z-10 animate-pulse" />
+                )}
+
+                <CardContent className="p-4 space-y-3 relative">
+                    {/* Pending Overlay Actions */}
+                    {isPending && (
+                        <div className="absolute inset-0 bg-background/80 backdrop-blur-[1px] z-20 flex flex-col items-center justify-center gap-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity p-4 text-center">
+                            <p className="text-sm font-semibold">Join this project?</p>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        if (onRespond) onRespond(false)
+                                    }}
+                                    className="h-8 px-3 rounded-md bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-colors"
+                                >
+                                    Decline
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        if (onRespond) onRespond(true)
+                                    }}
+                                    className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                                >
+                                    Accept
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     {/* Header with Icon */}
                     <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
