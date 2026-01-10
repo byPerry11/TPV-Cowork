@@ -52,21 +52,24 @@ export function ProjectCard({
     // Get category info
     const categoryInfo = ENGINEERING_CATEGORIES.find(cat => cat.value === category)
 
+    const CardWrapper = isPending ? 'div' : Link
+    const wrapperProps = isPending ? {} : { href: `/projects/${id}` }
+
     return (
-        <Link href={`/projects/${id}`}>
+        <CardWrapper {...wrapperProps as any} className="block h-full">
             <Card
-                className={`transition-all duration-200 cursor-pointer border-l-4 h-full relative group ${isPending ? 'border-l-gray-300 opacity-90' : 'hover:shadow-lg'}`}
+                className={`transition-all duration-200 border-l-4 h-full relative group flex flex-col justify-between ${isPending ? 'border-l-gray-300 cursor-default' : 'hover:shadow-lg cursor-pointer'}`}
                 style={{ borderLeftColor: isPending ? undefined : (color || undefined) }}
             >
-                {/* Pending Notification Dot */}
+                {/* Pending Notification Dot (Desktop primarily, but fine on mobile too) */}
                 {isPending && (
                     <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 border-2 border-background z-10 animate-pulse" />
                 )}
 
-                <CardContent className="p-4 space-y-3 relative">
-                    {/* Pending Overlay Actions */}
+                <CardContent className="p-4 space-y-3 relative flex-grow">
+                    {/* Desktop Hover Overlay for Pending Actions */}
                     {isPending && (
-                        <div className="absolute inset-0 bg-background/80 backdrop-blur-[1px] z-20 flex flex-col items-center justify-center gap-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity p-4 text-center">
+                        <div className="hidden md:flex absolute inset-0 bg-background/95 backdrop-blur-[1px] z-20 flex-col items-center justify-center gap-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 text-center border">
                             <p className="text-sm font-semibold">Join this project?</p>
                             <div className="flex gap-2">
                                 <button
@@ -75,7 +78,7 @@ export function ProjectCard({
                                         e.stopPropagation()
                                         if (onRespond) onRespond(false)
                                     }}
-                                    className="h-8 px-3 rounded-md bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-colors"
+                                    className="h-8 px-4 rounded-md bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors shadow-sm"
                                 >
                                     Decline
                                 </button>
@@ -85,13 +88,14 @@ export function ProjectCard({
                                         e.stopPropagation()
                                         if (onRespond) onRespond(true)
                                     }}
-                                    className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                                    className="h-8 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
                                 >
                                     Accept
                                 </button>
                             </div>
                         </div>
                     )}
+
                     {/* Header with Icon */}
                     <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -122,7 +126,7 @@ export function ProjectCard({
                         </p>
                     )}
 
-                    {/* Progress */}
+                    {/* Progress - Hide if pending to save space or just show 0? Showing it is fine. */}
                     <div className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Progress</span>
@@ -132,7 +136,7 @@ export function ProjectCard({
                     </div>
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
                         <div className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
                             <span>{memberCount} {memberCount === 1 ? 'member' : 'members'}</span>
@@ -141,8 +145,34 @@ export function ProjectCard({
                             {status}
                         </Badge>
                     </div>
+
+                    {/* Mobile Only Pending Actions (Inline) */}
+                    {isPending && (
+                        <div className="md:hidden pt-4 mt-2 border-t flex flex-row items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    if (onRespond) onRespond(false)
+                                }}
+                                className="flex-1 h-9 rounded-md bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors border border-destructive/20"
+                            >
+                                Decline
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    if (onRespond) onRespond(true)
+                                }}
+                                className="flex-1 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+                            >
+                                Accept
+                            </button>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
-        </Link>
+        </CardWrapper>
     )
 }
