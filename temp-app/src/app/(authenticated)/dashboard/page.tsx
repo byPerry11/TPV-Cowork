@@ -145,7 +145,7 @@ export default function DashboardPage() {
   const handleInvitationResponse = async (projectId: string, accept: boolean) => {
     await handleProjectInvitation(projectId, accept)
     if (sessionUserId) {
-      fetchProjects(sessionUserId)
+      await fetchProjects(sessionUserId)
     }
   }
 
