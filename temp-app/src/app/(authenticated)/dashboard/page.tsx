@@ -24,6 +24,7 @@ interface UserProject {
   role: "admin" | "manager" | "member"
   progress: number
   memberCount: number
+  owner_id: string
 }
 
 export default function DashboardPage() {
@@ -32,6 +33,7 @@ export default function DashboardPage() {
   const [displayName, setDisplayName] = useState("")
   const [projects, setProjects] = useState<UserProject[]>([])
 
+  const [sessionUserId, setSessionUserId] = useState<string>("")
   const [hasNotifications, setHasNotifications] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
 
@@ -49,6 +51,7 @@ export default function DashboardPage() {
         router.push("/login")
         return
       }
+      setSessionUserId(session.user.id)
 
       // Fetch user profile
       const { data: profile } = await supabase
@@ -93,7 +96,8 @@ export default function DashboardPage() {
                     description,
                     color,
                     project_icon,
-                    status
+                    status,
+                    owner_id
                 )
             `)
           .eq("user_id", userId)
@@ -132,6 +136,7 @@ export default function DashboardPage() {
                 description: project.description,
                 color: project.color,
                 project_icon: project.project_icon,
+                owner_id: project.owner_id
               }
             })
         )
@@ -222,40 +227,82 @@ export default function DashboardPage() {
           {/* Projects Grid + Calendar */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Projects Grid - Takes 2 columns on large screens */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Your Projects</h2>
-                <span className="text-sm text-muted-foreground">
-                  {projects.length} {projects.length === 1 ? 'project' : 'projects'}
-                </span>
+            {/* Projects Grid - Takes 2 columns on large screens */}
+            <div className="lg:col-span-2 space-y-8">
+
+              {/* Owned Projects Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">My Projects</h2>
+                  <span className="text-sm text-muted-foreground">
+                    {projects.filter(p => p.owner_id === sessionUserId).length}
+                  </span>
+                </div>
+
+                {projects.filter(p => p.owner_id === sessionUserId).length === 0 ? (
+                  <div className="text-center py-8 border-2 border-dashed rounded-lg bg-muted/20">
+                    <p className="text-muted-foreground">You haven't created any projects yet</p>
+                    {/* Optional: Add Create Project Button here if desired */}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {projects
+                      .filter(p => p.owner_id === sessionUserId)
+                      .map(project => (
+                        <ProjectCard
+                          key={project.id}
+                          id={project.id}
+                          title={project.title}
+                          description={project.description}
+                          category={project.category}
+                          color={project.color}
+                          project_icon={project.project_icon}
+                          progress={project.progress}
+                          role={project.role}
+                          status={project.status}
+                          memberCount={project.memberCount}
+                        />
+                      ))}
+                  </div>
+                )}
               </div>
 
-              {projects.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                  <p className="text-muted-foreground">No projects yet</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Create your first project to get started
-                  </p>
+              {/* Shared Projects Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">Shared Projects</h2>
+                  <span className="text-sm text-muted-foreground">
+                    {projects.filter(p => p.owner_id !== sessionUserId).length}
+                  </span>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {projects.map(project => (
-                    <ProjectCard
-                      key={project.id}
-                      id={project.id}
-                      title={project.title}
-                      description={project.description}
-                      category={project.category}
-                      color={project.color}
-                      project_icon={project.project_icon}
-                      progress={project.progress}
-                      role={project.role}
-                      status={project.status}
-                      memberCount={project.memberCount}
-                    />
-                  ))}
-                </div>
-              )}
+
+                {projects.filter(p => p.owner_id !== sessionUserId).length === 0 ? (
+                  <div className="text-center py-8 border-2 border-dashed rounded-lg bg-muted/20">
+                    <p className="text-muted-foreground">No shared projects yet</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {projects
+                      .filter(p => p.owner_id !== sessionUserId)
+                      .map(project => (
+                        <ProjectCard
+                          key={project.id}
+                          id={project.id}
+                          title={project.title}
+                          description={project.description}
+                          category={project.category}
+                          color={project.color}
+                          project_icon={project.project_icon}
+                          progress={project.progress}
+                          role={project.role}
+                          status={project.status}
+                          memberCount={project.memberCount}
+                        />
+                      ))}
+                  </div>
+                )}
+              </div>
+
             </div>
 
             {/* Calendar - Takes 1 column on large screens */}

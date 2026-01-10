@@ -40,7 +40,7 @@ export function ProjectMembersList({ members, currentUserId }: ProjectMembersLis
             </CardHeader>
             <CardContent className="px-4 pb-4">
                 <ScrollArea className="h-[120px] pr-3">
-                    <div className="space-y-3">
+                    <div className="space-y-3 pt-2">
                         {activeMembers.map((member) => {
                             // Enforce purlple for admin
                             const memberColor = member.role === 'admin' ? '#a855f7' : (member.member_color || '#808080')
