@@ -175,10 +175,10 @@ export function NotificationsList({ embedded = false }: NotificationsListProps) 
                                 </div>
                                 <div className="truncate">
                                     <p className="text-sm font-medium truncate text-muted-foreground">
-                                        {invitation.project?.title || "Project Invitation"}
+                                        {invitation.project?.title || "Private Project"}
                                     </p>
                                     <p className="text-xs text-muted-foreground truncate">
-                                        {invitation.status === 'active' ? 'Joined' : 'Declined'} • {invitation.project?.owner?.display_name || "Owner"}
+                                        {invitation.status === 'active' ? 'Joined' : 'Declined'} • {invitation.project?.owner?.display_name || "Unknown Owner"}
                                     </p>
                                 </div>
                             </div>
