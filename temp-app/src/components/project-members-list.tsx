@@ -18,7 +18,7 @@ interface ProjectMember {
         username: string | null
         display_name: string | null
         avatar_url: string | null
-    }
+    } | null
 }
 
 interface ProjectMembersListProps {
@@ -57,7 +57,7 @@ export function ProjectMembersList({ members, currentUserId }: ProjectMembersLis
                                                     className="h-7 w-7 border-2"
                                                     style={{ borderColor: memberColor }}
                                                 >
-                                                    <AvatarImage src={member.profile.avatar_url || ""} />
+                                                    <AvatarImage src={member.profile?.avatar_url || ""} />
                                                     <AvatarFallback className="text-[10px]">
                                                         <User className="h-3 w-3" />
                                                     </AvatarFallback>
@@ -69,7 +69,7 @@ export function ProjectMembersList({ members, currentUserId }: ProjectMembersLis
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-1">
                                                     <span className="text-xs font-medium leading-none truncate max-w-[80px]">
-                                                        {member.profile.display_name || member.profile.username}
+                                                        {member.profile?.display_name || member.profile?.username || "Unknown User"}
                                                     </span>
                                                 </div>
                                                 <span className="text-[10px] text-muted-foreground capitalize leading-none">

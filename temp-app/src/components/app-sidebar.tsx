@@ -81,7 +81,7 @@ export function AppSidebar() {
           <div className="flex h-24 items-center justify-between border-b px-4 md:justify-center">
             <Link href="/dashboard" className="flex items-center gap-2 font-bold">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo-tpv.png" alt="TPV App" className="h-16 w-auto object-contain" />
+              <img src="/main-logo.png" alt="COWork" className="h-16 w-auto object-contain" />
             </Link>
             <Button
               variant="ghost"
@@ -135,11 +135,11 @@ export function AppSidebar() {
                     @{profile?.username}
                   </span>
                 </div>
-                </div>
+              </div>
               <div className="flex items-center gap-1">
                 <NotificationsPopover />
                 <Button variant="ghost" size="icon" onClick={handleLogout}>
-                    <LogOut className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                  <LogOut className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                 </Button>
               </div>
             </div>

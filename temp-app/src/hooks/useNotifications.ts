@@ -33,9 +33,9 @@ export interface RejectedCheckpoint {
     title: string
     rejection_reason: string | null
     rating: number
-    project: { 
+    project: {
         id: string
-        title: string 
+        title: string
     }
 }
 
@@ -62,7 +62,7 @@ export function useNotifications() {
                 .eq('receiver_id', user.id)
                 .eq('status', 'pending')
                 .order('created_at', { ascending: false })
-            
+
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             setFriendRequests(frData as any || [])
 
@@ -82,10 +82,13 @@ export function useNotifications() {
                 .eq('user_id', user.id)
                 .eq('status', 'pending')
                 .order('created_at', { ascending: false })
-            
+
             if (piError) console.error("Error fetching invites", piError)
+
+            // Filter out invites where project is null (RLS restricted or deleted)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            setProjectInvites(piData as any || [])
+            const validInvites = (piData as any || []).filter((inv: any) => inv.project)
+            setProjectInvites(validInvites)
 
             // 3. Rejected Checkpoints
             // First get project IDs where user is a member
@@ -93,7 +96,7 @@ export function useNotifications() {
                 .from('project_members')
                 .select('project_id')
                 .eq('user_id', user.id)
-            
+
             const projectIds = userProjects?.map(pm => pm.project_id) || []
 
             if (projectIds.length > 0) {
@@ -109,11 +112,11 @@ export function useNotifications() {
                     .eq('is_completed', false)
                     .not('rejection_reason', 'is', null)
                     .in('project_id', projectIds)
-                    // Optionally filter by completed_by if we tracked who submitted it
-                    // .eq('completed_by', user.id) 
-                
+
+                // Filter out checkpoints where project is null
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                setRejectedCheckpoints(rcData as any || [])
+                const validCheckpoints = (rcData as any || []).filter((cp: any) => cp.project)
+                setRejectedCheckpoints(validCheckpoints)
             } else {
                 setRejectedCheckpoints([])
             }
@@ -140,12 +143,12 @@ export function useNotifications() {
     const handleFriendResponse = async (id: string, accept: boolean) => {
         const status = accept ? 'accepted' : 'rejected'
         const { error } = await supabase.from('friend_requests').update({ status }).eq('id', id)
-        
+
         if (error) {
             toast.error("Failed to update request")
             return
         }
-        
+
         toast.success(accept ? "Friend request accepted" : "Friend request declined")
         fetchNotifications() // Refresh list
     }
