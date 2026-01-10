@@ -108,6 +108,7 @@ export default function DashboardPage() {
     )
 
     setProjects(projectsWithProgress)
+    console.log('🟢 Projects state updated:', projectsWithProgress.length, 'projects')
   }, [])
 
 
@@ -143,9 +144,13 @@ export default function DashboardPage() {
   }
 
   const handleInvitationResponse = async (projectId: string, accept: boolean) => {
+    console.log('🔵 handleInvitationResponse called:', { projectId, accept, sessionUserId })
     await handleProjectInvitation(projectId, accept)
+    console.log('🟢 handleProjectInvitation completed')
     if (sessionUserId) {
+      console.log('🔵 Calling fetchProjects...')
       await fetchProjects(sessionUserId)
+      console.log('🟢 fetchProjects completed')
     }
   }
 
