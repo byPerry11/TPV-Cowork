@@ -377,6 +377,7 @@ export function CreateProjectDialog({ onSuccess }: CreateProjectDialogProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Max Users</FormLabel>
+                  {/* ... existing select ... */}
                   <Select
                     onValueChange={(val) => field.onChange(parseInt(val))}
                     defaultValue={field.value?.toString()}
@@ -398,6 +399,30 @@ export function CreateProjectDialog({ onSuccess }: CreateProjectDialogProps) {
                     Maximum number of team members
                   </FormDescription>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Visibility Toggle */}
+            <FormField
+              control={form.control}
+              name="is_public"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Public Project
+                    </FormLabel>
+                    <FormDescription>
+                      Public projects are visible on your profile to everyone.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

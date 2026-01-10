@@ -33,12 +33,16 @@ export function ProfileProjects({ userId }: { userId: string }) {
                 .eq('status', 'active')
 
             if (data) {
-                const mapped = data.map((d: any) => ({
-                    id: d.project.id,
-                    title: d.project.title,
-                    status: d.project.status,
-                    role: d.role
-                }))
+                // Filter out projects that RLS hid (null project relation)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const mapped = data
+                    .filter((d: any) => d.project) // <--- Safety check
+                    .map((d: any) => ({
+                        id: d.project.id,
+                        title: d.project.title,
+                        status: d.project.status,
+                        role: d.role
+                    }))
                 setProjects(mapped)
             }
             setLoading(false)
