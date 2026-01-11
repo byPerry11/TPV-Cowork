@@ -113,6 +113,11 @@ export default function DashboardPage() {
         })
     )
 
+    console.log('🔍 Projects with membership status:', projectsWithProgress.map(p => ({
+      title: p.title,
+      membershipStatus: p.membershipStatus
+    })))
+
     setProjects(projectsWithProgress)
     console.log('🟢 Projects state updated:', projectsWithProgress.length, 'projects')
   }, [])
