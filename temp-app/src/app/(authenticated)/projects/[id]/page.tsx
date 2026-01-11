@@ -11,7 +11,7 @@ import { CheckpointList } from "@/components/checkpoint-list"
 import { AddCheckpointDialog } from "@/components/add-checkpoint-dialog"
 import { ProjectMembersList } from "@/components/project-members-list"
 import { LeaveProjectDialog } from "@/components/leave-project-dialog"
-import { DeleteProjectDialog } from "@/components/delete-project-dialog"
+import { ProjectSettingsDialog } from "@/components/project-settings-dialog"
 import { Project } from "@/types"
 import { useProjectRole } from "@/hooks/use-project-role"
 import { ProjectCalendar } from "@/components/project-calendar"
@@ -185,7 +185,7 @@ function ProjectDetailContent() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {isOwner ? (
-              <DeleteProjectDialog projectId={project.id} projectTitle={project.title} />
+              <ProjectSettingsDialog project={project} members={members} isOwner={isOwner} onProjectUpdate={() => setRefreshKey(prev => prev + 1)} />
             ) : (
               <LeaveProjectDialog projectId={project.id} projectTitle={project.title} />
             )}
@@ -273,8 +273,8 @@ function ProjectDetailContent() {
             </div>
           </div>
         </main>
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }
 
