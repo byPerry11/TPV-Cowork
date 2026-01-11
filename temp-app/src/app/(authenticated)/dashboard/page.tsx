@@ -156,6 +156,20 @@ export default function DashboardPage() {
 
   const handleInvitationResponse = async (projectId: string, accept: boolean) => {
     console.log('🔵 handleInvitationResponse called:', { projectId, accept, sessionUserId })
+
+    // Optimistic update: immediately update UI
+    if (accept) {
+      setProjects(prev => prev.map(p =>
+        p.id === projectId
+          ? { ...p, membershipStatus: 'active' as const }
+          : p
+      ))
+    } else {
+      // Remove from list if declining
+      setProjects(prev => prev.filter(p => p.id !== projectId))
+    }
+
+    // Then update database and refresh
     await handleProjectInvitation(projectId, accept)
     console.log('🟢 handleProjectInvitation completed')
     if (sessionUserId) {
