@@ -19,7 +19,6 @@ export interface ProjectInvitation {
     project_id: string
     user_id: string
     role: string
-    created_at: string
     status: 'pending' | 'active' | 'rejected'
     project: {
         title: string
@@ -75,7 +74,6 @@ export function useNotifications() {
                     user_id,
                     role,
                     status,
-                    created_at,
                     project:project_id(
                         title,
                         owner_id
@@ -83,7 +81,6 @@ export function useNotifications() {
                 `)
                 .eq('user_id', user.id)
                 .in('status', ['pending', 'active', 'rejected'])
-                .order('created_at', { ascending: false })
                 .limit(20)
 
             if (piError) console.error("Error fetching invites", piError)
