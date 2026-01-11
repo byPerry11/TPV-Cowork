@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { Loader2 } from "lucide-react"
+import { Loader2, Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -27,6 +27,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { supabase } from "@/lib/supabaseClient"
+import { PasswordStrength } from "@/components/password-strength"
 
 // Allowed email domains for registration
 const ALLOWED_EMAIL_DOMAINS = [
@@ -77,6 +78,10 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [checkingSession, setCheckingSession] = useState(true)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
+  const usernameCheckTimeout = useRef<NodeJS.Timeout | null>(null)
   const router = useRouter()
 
   const form = useForm<z.infer<typeof signUpSchema>>({
@@ -124,7 +129,7 @@ export default function LoginPage() {
           }
         })
         if (error) throw error
-        
+
         router.push("/verify-email")
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -186,8 +191,48 @@ export default function LoginPage() {
                       <FormItem>
                         <FormLabel>Username</FormLabel>
                         <FormControl>
-                          <Input placeholder="jdoe" {...field} />
+                          <div className="relative">
+                            <Input
+                              placeholder="jdoe"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e)
+                                const value = e.target.value
+                                if (value.length >= 3) {
+                                  setUsernameStatus('checking')
+                                  if (usernameCheckTimeout.current) {
+                                    clearTimeout(usernameCheckTimeout.current)
+                                  }
+                                  usernameCheckTimeout.current = setTimeout(async () => {
+                                    const { data } = await supabase
+                                      .from('profiles')
+                                      .select('username')
+                                      .eq('username', value)
+                                      .single()
+                                    setUsernameStatus(data ? 'taken' : 'available')
+                                  }, 500)
+                                } else {
+                                  setUsernameStatus('idle')
+                                }
+                              }}
+                            />
+                            {usernameStatus === 'checking' && (
+                              <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+                            )}
+                            {usernameStatus === 'available' && (
+                              <CheckCircle2 className="absolute right-3 top-2.5 h-4 w-4 text-green-500" />
+                            )}
+                            {usernameStatus === 'taken' && (
+                              <XCircle className="absolute right-3 top-2.5 h-4 w-4 text-red-500" />
+                            )}
+                          </div>
                         </FormControl>
+                        {usernameStatus === 'taken' && (
+                          <p className="text-sm text-red-500">This username is already taken</p>
+                        )}
+                        {usernameStatus === 'available' && (
+                          <p className="text-sm text-green-500">Username available!</p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -227,27 +272,76 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} onPaste={(e) => e.preventDefault()} />
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          {...field}
+                          onPaste={(e) => e.preventDefault()}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
+                    {isSignUp && <PasswordStrength password={field.value} />}
                   </FormItem>
                 )}
               />
-              
+
+              {!isSignUp && (
+                <div className="flex justify-end">
+                  <a href="/forgot-password" className="text-sm text-primary hover:underline">
+                    Forgot password?
+                  </a>
+                </div>
+              )}
+
               {isSignUp && (
-                  <FormField
-                    control={form.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirm Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} onPaste={(e) => e.preventDefault()} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            {...field}
+                            onPaste={(e) => e.preventDefault()}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
 
               <Button type="submit" className="w-full" disabled={isLoading}>
@@ -258,14 +352,14 @@ export default function LoginPage() {
           </Form>
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
-            <Button 
-                variant="link" 
-                className="w-full text-sm text-muted-foreground"
-                onClick={() => setIsSignUp(!isSignUp)}
-                type="button"
-            >
-                {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
-            </Button>
+          <Button
+            variant="link"
+            className="w-full text-sm text-muted-foreground"
+            onClick={() => setIsSignUp(!isSignUp)}
+            type="button"
+          >
+            {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+          </Button>
         </CardFooter>
       </Card>
     </div>
