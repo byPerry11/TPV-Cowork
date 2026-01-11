@@ -103,7 +103,7 @@ export function NotificationsList({ embedded = false }: NotificationsListProps) 
                                             {invitation.project?.title || "Private Project (Access Pending)"}
                                         </p>
                                         <p className="text-xs text-muted-foreground truncate">
-                                            {invitation.project?.owner?.display_name ? `Invited by ${invitation.project.owner.display_name}` : "Invitation to private project"}
+                                            {invitation.project ? "Project invitation" : "Invitation to private project"}
                                         </p>
                                     </div>
                                 </div>
@@ -178,7 +178,7 @@ export function NotificationsList({ embedded = false }: NotificationsListProps) 
                                         {invitation.project?.title || "Private Project"}
                                     </p>
                                     <p className="text-xs text-muted-foreground truncate">
-                                        {invitation.status === 'active' ? 'Joined' : 'Declined'} • {invitation.project?.owner?.display_name || "Unknown Owner"}
+                                        {invitation.status === 'active' ? 'Joined' : 'Declined'}
                                     </p>
                                 </div>
                             </div>

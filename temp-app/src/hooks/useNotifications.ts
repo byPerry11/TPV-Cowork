@@ -23,11 +23,8 @@ export interface ProjectInvitation {
     status: 'pending' | 'active' | 'rejected'
     project: {
         title: string
-        owner: {
-            display_name: string | null
-            username: string
-        }
-    }
+        owner_id: string
+    } | null
 }
 
 export interface RejectedCheckpoint {
@@ -81,7 +78,7 @@ export function useNotifications() {
                     created_at,
                     project:project_id(
                         title,
-                        owner:owner_id(display_name, username)
+                        owner_id
                     )
                 `)
                 .eq('user_id', user.id)
