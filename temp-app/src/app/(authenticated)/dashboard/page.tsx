@@ -196,9 +196,9 @@ export default function DashboardPage() {
               </div>
               {/* App icon - mobile only */}
               <img
-                src="/cowork-icon.png"
+                src="/main-logo.png"
                 alt="COWork"
-                className="h-12 w-12 rounded-xl shadow-md md:hidden"
+                className="h-12 w-12 rounded-xl shadow-md md:hidden object-cover"
               />
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto">
