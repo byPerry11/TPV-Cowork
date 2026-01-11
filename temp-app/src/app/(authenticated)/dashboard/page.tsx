@@ -185,13 +185,21 @@ export default function DashboardPage() {
         <div className="container mx-auto p-4 md:p-6 space-y-6 pb-24 md:pb-6">
           {/* Header with Search and Avatar */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <h1 className="text-3xl font-bold tracking-tight">
-                Hello, {displayName} 👋
-              </h1>
-              <p className="text-sm text-muted-foreground italic">
-                "{randomQuote.text}" — <span className="font-medium">{randomQuote.author}</span>
-              </p>
+            <div className="flex items-center justify-between w-full md:w-auto">
+              <div className="flex flex-col gap-0.5 md:gap-1">
+                <h1 className="text-xl md:text-3xl font-bold tracking-tight">
+                  Hello, {displayName} 👋
+                </h1>
+                <p className="text-xs md:text-sm text-muted-foreground italic max-w-[250px] md:max-w-none line-clamp-2 md:line-clamp-none">
+                  "{randomQuote.text}" — <span className="font-medium">{randomQuote.author}</span>
+                </p>
+              </div>
+              {/* App icon - mobile only */}
+              <img
+                src="/cowork-icon.png"
+                alt="COWork"
+                className="h-12 w-12 rounded-xl shadow-md md:hidden"
+              />
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto">
               <div className="flex-1 md:flex-initial">
