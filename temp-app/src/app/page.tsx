@@ -9,16 +9,19 @@ import { ParticleBackground } from "@/components/particle-background"
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-black text-white">
+    <div className="relative min-h-screen w-full overflow-hidden bg-black text-white selection:bg-white/20">
       {/* Background Animation */}
       <ParticleBackground />
 
       {/* Navigation / Header */}
       <header className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-6 md:px-12">
-        <div className="flex items-center gap-2">
-          {/* Small logo placeholder if needed, or just text */}
-          <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/10">
-            <Zap className="h-4 w-4 text-white" />
+        <div className="flex items-center gap-3">
+          <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-white/10 shadow-lg">
+            <img
+              src="/cowork-logo-dark.jpg"
+              alt="COWork"
+              className="h-full w-full object-cover"
+            />
           </div>
           <span className="font-bold tracking-wider text-xl">COWork</span>
         </div>
@@ -30,7 +33,7 @@ export default function LandingPage() {
             </Button>
           </Link>
           <Link href="/login?tab=signup">
-            <Button className="bg-white text-black hover:bg-white/90 font-medium px-6">
+            <Button className="bg-white text-black hover:bg-white/90 font-medium px-6 rounded-full">
               Sign Up
             </Button>
           </Link>
@@ -38,7 +41,7 @@ export default function LandingPage() {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 text-center">
+      <main className="relative z-10 flex flex-col items-center justify-center px-4 pt-32 pb-16 text-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -50,13 +53,13 @@ export default function LandingPage() {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="mb-8 relative"
+            className="mb-8 relative group"
           >
-            <div className="absolute inset-0 bg-white/20 blur-3xl rounded-full" />
+            <div className="absolute inset-0 bg-white/10 blur-3xl rounded-full opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
             <img
-              src="/main-logo.png"
+              src="/cowork-logo-dark.jpg"
               alt="COWork Logo"
-              className="h-32 w-auto relative z-10 drop-shadow-2xl brightness-200 contrast-100"
+              className="h-40 w-40 relative z-10 drop-shadow-2xl rounded-3xl border border-white/10 shadow-2xl shadow-white/5"
             />
           </motion.div>
 
@@ -129,6 +132,63 @@ export default function LandingPage() {
           </motion.div>
         </motion.div>
       </main>
+
+      {/* Footer */}
+      <footer className="relative z-10 mt-20 border-t border-white/10 bg-black py-12 text-center md:text-left">
+        <div className="container mx-auto px-6">
+          <div className="grid grid-cols-1 gap-12 md:grid-cols-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-center md:justify-start gap-2">
+                <div className="h-8 w-8 overflow-hidden rounded-lg border border-white/10">
+                  <img src="/cowork-logo-dark.jpg" alt="Logo" className="h-full w-full object-cover" />
+                </div>
+                <span className="text-lg font-bold tracking-wider text-white">COWork</span>
+              </div>
+              <p className="text-sm text-gray-500">
+                Empowering teams to build the future. <br /> Simple, fast, and elegant.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="mb-4 font-semibold text-white">Product</h4>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Changelog</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-4 font-semibold text-white">Company</h4>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-4 font-semibold text-white">Legal</h4>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Cookie Policy</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-12 flex flex-col items-center justify-between border-t border-white/5 pt-8 md:flex-row text-xs text-gray-600">
+            <p>&copy; {new Date().getFullYear()} COWork Inc. All rights reserved.</p>
+            <div className="flex gap-6 mt-4 md:mt-0">
+              <a href="#" className="hover:text-white transition-colors">Twitter</a>
+              <a href="#" className="hover:text-white transition-colors">GitHub</a>
+              <a href="#" className="hover:text-white transition-colors">Discord</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

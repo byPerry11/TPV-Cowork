@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "COWork",
   description: "Collaborative Project Management",
+  icons: {
+    icon: "/cowork-logo-dark.jpg",
+  },
 };
 
 import { Toaster } from "@/components/ui/sonner"
