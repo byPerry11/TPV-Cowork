@@ -61,11 +61,11 @@ export default function AboutPage() {
                         </div>
 
                         <div className="mt-8 flex items-center gap-4 border-t border-white/10 pt-8">
-                            <div className="h-12 w-12 rounded-full overflow-hidden border border-white/20">
-                                <img src="/cowork-logo-dark.jpg" alt="Creator" className="h-full w-full object-cover" />
+                            <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-white/20">
+                                <img src="/developer-profile.jpg" alt="Perry Corzo" className="h-full w-full object-cover" />
                             </div>
                             <div>
-                                <p className="text-white font-medium">The Developer</p>
+                                <p className="text-white font-medium text-lg">Perry Corzo</p>
                                 <p className="text-sm text-gray-500">Creator of COWork</p>
                             </div>
                         </div>
