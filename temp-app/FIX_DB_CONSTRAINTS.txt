@@ -1,0 +1,10 @@
+-- Drop the existing constraint (if it exists) to allow modification
+ALTER TABLE project_members DROP CONSTRAINT IF EXISTS check_status;
+
+-- Re-create the constraint with all necessary values
+ALTER TABLE project_members 
+ADD CONSTRAINT check_status 
+CHECK (status IN ('pending', 'active', 'rejected', 'left', 'removed'));
+
+-- Optional: If there is a trigger causing issues on delete, we might need to inspect it.
+-- But usually 'new row' errors come from Insert/Update logic.

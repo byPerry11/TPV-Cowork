@@ -15,6 +15,7 @@ import { ProjectSettingsDialog } from "@/components/project-settings-dialog"
 import { Project } from "@/types"
 import { useProjectRole } from "@/hooks/use-project-role"
 import { ProjectCalendar } from "@/components/project-calendar"
+import { ProjectCompletionDialog } from "@/components/project-completion-dialog"
 
 function ProjectDetailContent() {
   const params = useParams()
@@ -31,7 +32,10 @@ function ProjectDetailContent() {
 
   const [isEditingDescription, setIsEditingDescription] = useState(false)
   const [tempDescription, setTempDescription] = useState("")
+
   const [savingDescription, setSavingDescription] = useState(false)
+  
+  const [projectStatus, setProjectStatus] = useState({ completed: 0, total: 0 })
 
   useEffect(() => {
     const fetchProjectAndMembers = async () => {
@@ -250,11 +254,29 @@ function ProjectDetailContent() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
             {/* Checkpoints Column */}
             <div className="lg:col-span-3 space-y-6">
+              {isOwner && projectStatus.completed === projectStatus.total && projectStatus.total > 0 && !project.end_date && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900 p-4 rounded-lg flex items-center justify-between animate-in slide-in-from-top-2">
+                  <div>
+                    <h4 className="font-semibold text-green-700 dark:text-green-300">All Tasks Completed!</h4>
+                    <p className="text-sm text-green-600 dark:text-green-400">The project is ready to be finalized.</p>
+                  </div>
+                  <ProjectCompletionDialog 
+                    projectId={project.id} 
+                    projectTitle={project.title} 
+                    onCompleted={() => {
+                        setProject(prev => prev ? { ...prev, end_date: new Date().toISOString() } : null)
+                        setRefreshKey(p => p + 1)
+                    }} 
+                  />
+                </div>
+              )}
+
               <CheckpointList
                 projectId={project.id}
                 userRole={userRole}
                 members={members}
                 key={refreshKey}
+                onProgress={(c, t) => setProjectStatus({ completed: c, total: t })}
               />
             </div>
 

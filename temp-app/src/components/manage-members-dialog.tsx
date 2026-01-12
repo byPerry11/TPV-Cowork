@@ -175,6 +175,23 @@ export function ManageMembersDialog({ projectId }: ManageMembersDialogProps) {
 
             if (insertError) throw insertError
 
+            // Send Notification
+            const { data: projData } = await supabase
+                .from('projects')
+                .select('title')
+                .eq('id', projectId)
+                .single()
+            
+            const projectTitle = projData?.title || 'a project'
+
+            await supabase.from('notifications').insert({
+                user_id: targetUserId,
+                type: 'project_invite',
+                title: 'Project Invitation',
+                message: `You have been invited to join ${projectTitle}`,
+                reference_id: projectId
+            })
+
             toast.success("Member added successfully")
             form.reset()
             setSelectedUserId(null)

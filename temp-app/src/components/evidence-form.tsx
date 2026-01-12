@@ -142,6 +142,14 @@ export function EvidenceForm({ checkpointId, onSuccess, onCancel }: EvidenceForm
 
       if (dbError) throw dbError
 
+      // Fetch checkpoint details for notification
+      const { data: cpData } = await supabase
+        .from('checkpoints')
+        .eq("id", checkpointId)
+        .select('title, project_id, project:projects(title)')
+        .single()
+
+       // Update Checkpoint
       await supabase
         .from("checkpoints")
         .update({
@@ -150,6 +158,28 @@ export function EvidenceForm({ checkpointId, onSuccess, onCancel }: EvidenceForm
           completed_at: new Date().toISOString()
         })
         .eq("id", checkpointId)
+
+      // Notify other members
+      if (cpData) {
+          const { data: members } = await supabase
+            .from('project_members')
+            .select('user_id')
+            .eq('project_id', cpData.project_id)
+            .neq('user_id', session.user.id) // Don't notify self
+
+          if (members && members.length > 0) {
+              const notifications = members.map(m => ({
+                  user_id: m.user_id,
+                  type: 'checkpoint_completed',
+                  title: 'Checkpoint Completed',
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  message: `A task has been completed in ${(cpData.project as any)?.title || 'Project'}`, 
+                  reference_id: cpData.project_id
+              }))
+              
+              await supabase.from('notifications').insert(notifications)
+          }
+      }
 
       toast.success("Evidence saved successfully!")
       form.reset()

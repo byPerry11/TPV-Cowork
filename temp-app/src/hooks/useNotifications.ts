@@ -33,11 +33,21 @@ export interface RejectedCheckpoint {
     }
 }
 
+export interface SystemNotification {
+    id: string
+    type: string
+    title: string
+    message: string
+    is_read: boolean
+    created_at: string
+}
+
 export function useNotifications() {
     const [loading, setLoading] = useState(true)
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([])
     const [projectInvites, setProjectInvites] = useState<ProjectInvitation[]>([])
     const [rejectedCheckpoints, setRejectedCheckpoints] = useState<RejectedCheckpoint[]>([])
+    const [systemNotifications, setSystemNotifications] = useState<SystemNotification[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
 
     const fetchNotifications = useCallback(async () => {
@@ -118,10 +128,21 @@ export function useNotifications() {
                 setRejectedCheckpoints([])
             }
 
-            // Update counts (Only count PENDING as unread)
+            // 4. System Notifications (New Table)
+            const { data: sysData } = await supabase
+                .from('notifications')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(20)
+
+            setSystemNotifications(sysData || [])
+
+            // Update counts (Only count PENDING as unread + unread system notifications)
             const pendingFR = frData?.filter((fr: any) => fr.status === 'pending').length || 0
             const pendingPI = validInvites.filter((pi: any) => pi.status === 'pending').length
-            const total = pendingFR + pendingPI + rejectedCheckpoints.length
+            const unreadSys = (sysData || []).filter((n: any) => !n.is_read).length
+            const total = pendingFR + pendingPI + rejectedCheckpoints.length + unreadSys
             setUnreadCount(total)
 
         } catch (error) {
@@ -184,14 +205,21 @@ export function useNotifications() {
         fetchNotifications()
     }
 
+    const markAsRead = async (id: string) => {
+        await supabase.from('notifications').update({ is_read: true }).eq('id', id)
+        fetchNotifications()
+    }
+
     return {
         loading,
         unreadCount,
         friendRequests,
         projectInvites,
         rejectedCheckpoints,
+        systemNotifications,
         refresh: fetchNotifications,
         handleFriendResponse,
-        handleProjectInvitation
+        handleProjectInvitation,
+        markAsRead
     }
 }

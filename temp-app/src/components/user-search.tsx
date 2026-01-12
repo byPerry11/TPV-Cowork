@@ -104,6 +104,23 @@ export function UserSearch({ onRequestSent }: UserSearchProps) {
 
             if (error) throw error
 
+            // Send Notification
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('username')
+                .eq('id', userId)
+                .single()
+            
+            const senderName = profile?.username || 'Someone'
+
+            await supabase.from('notifications').insert({
+                user_id: receiverId,
+                type: 'friend_request',
+                title: 'New Friend Request',
+                message: `${senderName} sent you a friend request`,
+                reference_id: userId
+            })
+
             // Success state
             setSendingMap(prev => ({ ...prev, [receiverId]: false }))
             setSuccessMap(prev => ({ ...prev, [receiverId]: true }))

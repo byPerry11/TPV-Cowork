@@ -38,6 +38,7 @@ interface CheckpointListProps {
   userRole: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   members: any[];
+  onProgress?: (completed: number, total: number) => void;
 }
 
 interface SortableCheckpointItemProps {
@@ -192,6 +193,7 @@ export function CheckpointList({
   projectId,
   userRole,
   members,
+  onProgress,
 }: CheckpointListProps) {
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -216,7 +218,13 @@ export function CheckpointList({
         console.error("Error fetching checkpoints:", error);
         return;
       }
-      setCheckpoints(data || []);
+      const all = data || [];
+      setCheckpoints(all);
+      
+      const total = all.length;
+      const completed = all.filter(c => c.is_completed).length;
+      if (onProgress) onProgress(completed, total);
+
     } catch (err) {
       console.error(err);
     } finally {
