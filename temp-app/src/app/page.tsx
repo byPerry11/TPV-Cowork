@@ -18,7 +18,7 @@ export default function LandingPage() {
         <div className="flex items-center gap-3">
           <div className="relative h-8 w-8 md:h-10 md:w-10 overflow-hidden rounded-xl border border-white/10 shadow-lg">
             <img
-              src="/cowork-logo-v2.png"
+              src="/cowork-logo-dark.jpg"
               alt="COWork"
               className="h-full w-full object-cover"
             />
@@ -57,7 +57,7 @@ export default function LandingPage() {
           >
             <div className="absolute inset-0 bg-white/10 blur-3xl rounded-full opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
             <img
-              src="/cowork-logo-v2.png"
+              src="/cowork-logo-dark.jpg"
               alt="COWork Logo"
               className="h-48 w-48 md:h-64 md:w-64 relative z-10 drop-shadow-2xl rounded-[3.5rem]"
             />
@@ -140,7 +140,7 @@ export default function LandingPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-center md:justify-start gap-2">
                 <div className="h-8 w-8 overflow-hidden rounded-lg border border-white/10">
-                  <img src="/cowork-logo-v2.png" alt="Logo" className="h-full w-full object-cover" />
+                  <img src="/cowork-logo-dark.jpg" alt="Logo" className="h-full w-full object-cover" />
                 </div>
                 <span className="text-lg font-bold tracking-wider text-white">COWork</span>
               </div>
