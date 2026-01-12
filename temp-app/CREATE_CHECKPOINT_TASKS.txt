@@ -1,0 +1,58 @@
+-- Create checkpoint_tasks table
+create table if not exists public.checkpoint_tasks (
+  id uuid default gen_random_uuid() primary key,
+  checkpoint_id uuid references public.checkpoints(id) on delete cascade not null,
+  title text not null,
+  is_completed boolean default false,
+  completed_by uuid references auth.users(id),
+  completed_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Enable RLS
+alter table public.checkpoint_tasks enable row level security;
+
+-- Policies
+create policy "Users can view tasks for projects they are members of"
+  on public.checkpoint_tasks for select
+  using (
+    exists (
+      select 1 from public.checkpoints c
+      join public.project_members pm on pm.project_id = c.project_id
+      where c.id = checkpoint_tasks.checkpoint_id
+      and pm.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can create tasks for projects they are members of"
+  on public.checkpoint_tasks for insert
+  with check (
+    exists (
+      select 1 from public.checkpoints c
+      join public.project_members pm on pm.project_id = c.project_id
+      where c.id = checkpoint_tasks.checkpoint_id
+      and pm.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can update tasks for projects they are members of"
+  on public.checkpoint_tasks for update
+  using (
+    exists (
+      select 1 from public.checkpoints c
+      join public.project_members pm on pm.project_id = c.project_id
+      where c.id = checkpoint_tasks.checkpoint_id
+      and pm.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can delete tasks for projects they are members of"
+  on public.checkpoint_tasks for delete
+  using (
+    exists (
+      select 1 from public.checkpoints c
+      join public.project_members pm on pm.project_id = c.project_id
+      where c.id = checkpoint_tasks.checkpoint_id
+      and pm.user_id = auth.uid()
+    )
+  );

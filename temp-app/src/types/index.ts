@@ -55,6 +55,16 @@ export interface Checkpoint {
   created_at: string
 }
 
+export interface CheckpointTask {
+  id: string
+  checkpoint_id: string
+  title: string
+  is_completed: boolean
+  completed_by?: string | null
+  completed_at?: string | null
+  created_at: string
+}
+
 export interface Evidence {
   id: string
   checkpoint_id: string

@@ -3,10 +3,11 @@ import { supabase } from "@/lib/supabaseClient";
 import { Checkpoint } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Circle, Camera, GripVertical } from "lucide-react";
+import { CheckCircle2, Circle, Camera, GripVertical, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { EvidenceForm } from "@/components/evidence-form";
 import { EvidenceViewer } from "@/components/evidence-viewer";
+import { CheckpointTasksList } from "@/components/checkpoint-tasks-list";
 import {
   Dialog,
   DialogContent,
@@ -82,10 +83,12 @@ function SortableCheckpointItem({
     }
   }
 
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <div ref={setNodeRef} style={style} className="mb-4">
       <Card
-        className={`${checkpoint.is_completed ? "border-2" : ""}`}
+        className={`${checkpoint.is_completed ? "border-2" : ""} transition-all duration-200`}
         style={cardStyle}
       >
         <CardHeader className="flex flex-row items-center space-x-4 p-4 pb-2">
@@ -98,10 +101,17 @@ function SortableCheckpointItem({
             <GripVertical className="h-5 w-5 text-muted-foreground" />
           </div>
 
-          <div className="flex-1 flex items-center justify-between">
-            <CardTitle className="text-base font-medium">
-              {checkpoint.title}
-            </CardTitle>
+          <div 
+            className="flex-1 flex items-center justify-between cursor-pointer"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-base font-medium">
+                {checkpoint.title}
+              </CardTitle>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+            </div>
+
             {checkpoint.is_completed ? (
               <CheckCircle2
                 className={`h-5 w-5 ${!checkpoint.completed_by ? "text-green-500" : ""}`}
@@ -115,6 +125,16 @@ function SortableCheckpointItem({
           </div>
         </CardHeader>
         <CardContent className="p-4 pt-0 pl-14">
+            {/* Sub-tasks area - Visible when expanded */}
+            {isExpanded && (
+                <div className="mb-4 border-t pt-2 mt-1 animate-in slide-in-from-top-2 fade-in duration-200">
+                    <CheckpointTasksList 
+                        checkpointId={checkpoint.id} 
+                        canEdit={true} // Allow all members to add tasks as per request
+                    />
+                </div>
+            )}
+
           <div className="flex justify-end pt-2">
             <Dialog>
               <DialogTrigger asChild>
