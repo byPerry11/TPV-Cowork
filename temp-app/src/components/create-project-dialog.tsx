@@ -39,7 +39,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
+import { cn, getRandomMemberColor } from "@/lib/utils"
 import { supabase } from "@/lib/supabaseClient"
 import { ColorPicker } from "@/components/color-picker"
 import { EmojiPicker } from "@/components/emoji-picker"
@@ -116,7 +116,8 @@ export function CreateProjectDialog({ onSuccess }: CreateProjectDialogProps) {
           project_id: projectData.id,
           user_id: session.user.id,
           role: 'admin',
-          status: 'active' // Owner is active by default
+          status: 'active', // Owner is active by default
+          member_color: getRandomMemberColor()
         })
 
       if (memberError) throw memberError
@@ -127,7 +128,8 @@ export function CreateProjectDialog({ onSuccess }: CreateProjectDialogProps) {
           project_id: projectData.id,
           user_id: uid,
           role: 'member',
-          status: 'pending'
+          status: 'pending',
+          member_color: getRandomMemberColor()
         }))
 
         const { error: inviteError } = await supabase

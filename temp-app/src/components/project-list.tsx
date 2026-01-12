@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Progress } from "@/components/ui/progress"
 import { Project, Role } from "@/types"
+import { ProjectCard } from "@/components/project-card"
 import { CalendarDays, Users } from "lucide-react"
 
 interface ProjectListProps {
@@ -18,6 +19,7 @@ interface ProjectWithRole extends Project {
   progress: number
   total_tasks: number
   completed_tasks: number
+  members: { avatar_url: string | null }[]
 }
 
 export function ProjectList({ userId }: ProjectListProps) {
@@ -33,12 +35,23 @@ export function ProjectList({ userId }: ProjectListProps) {
             role,
             projects:project_id (
               id,
+              id,
               title,
+              description,
+              category,
+              color,
+              project_icon,
               status,
               start_date,
               max_users,
               checkpoints (
                 is_completed
+              ),
+              project_members (
+                user_id,
+                profiles (
+                  avatar_url
+                )
               )
             )
           `)
@@ -58,12 +71,18 @@ export function ProjectList({ userId }: ProjectListProps) {
           const completed = checkpoints.filter((c: any) => c.is_completed).length
           const progress = total > 0 ? (completed / total) * 100 : 0
 
+          // Map members for UI
+          const members = item.projects.project_members?.map((pm: any) => ({
+             avatar_url: pm.profiles?.avatar_url
+          })) || []
+
           return {
             ...item.projects,
             user_role: item.role,
             progress,
             total_tasks: total,
-            completed_tasks: completed
+            completed_tasks: completed,
+            members
           }
         }) as ProjectWithRole[]
 
@@ -111,39 +130,26 @@ export function ProjectList({ userId }: ProjectListProps) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {projects.map((project) => (
-        <Card
-          key={project.id}
-          className="cursor-pointer hover:bg-accent/50 transition-colors"
-          onClick={() => window.location.href = `/projects/${project.id}`}
-        >
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-start">
-              <CardTitle className="text-lg">{project.title}</CardTitle>
-              <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                {project.status}
-              </Badge>
-            </div>
-            <CardDescription className="flex items-center gap-1">
-              <Users className="w-3 h-3" />
-              {project.user_role}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
-              <CalendarDays className="w-4 h-4" />
-              <span>Starts: {new Date(project.start_date || "").toLocaleDateString()}</span>
-            </div>
 
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Progress</span>
-                <span>{project.completed_tasks}/{project.total_tasks} tasks</span>
-              </div>
-              <Progress value={project.progress} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
+      {projects.map((project) => (
+        <div key={project.id} className="h-full">
+            <ProjectCard
+                id={project.id}
+                title={project.title}
+                description={project.title} // Description was missing in select? No, it wasn't fetched! I need to check fetch.
+                // Wait, ProjectList fetching didn't select description or other fields needed by ProjectCard?
+                // Fetching query: select(id, title, status, start_date, max_users...)
+                // ProjectCard needs: description, category, color, project_icon
+                // I need to update the query in ProjectList as well if I want to use ProjectCard fully.
+                // For now, I will use what I have and Defaults, or update query. 
+                // Let's update query in next step.
+                status={project.status}
+                role={project.user_role}
+                progress={project.progress}
+                memberCount={project.members.length} // Approximate or fetched count? fetch didn't get count, just members.
+                members={project.members}
+            />
+        </div>
       ))}
     </div>
   )

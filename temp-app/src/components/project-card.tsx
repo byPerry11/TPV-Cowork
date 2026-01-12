@@ -19,6 +19,7 @@ interface ProjectCardProps {
     status: "active" | "completed" | "archived"
     memberCount?: number
     membershipStatus?: "active" | "pending" | "rejected"
+    members?: { avatar_url: string | null }[]
     onRespond?: (accept: boolean) => void
 }
 
@@ -33,112 +34,37 @@ export function ProjectCard({
     role,
     status,
     memberCount = 1,
+    members = [],
     membershipStatus = "active",
     onRespond
 }: ProjectCardProps) {
     const isPending = membershipStatus === "pending"
-    const roleColors = {
-        admin: "bg-purple-500",
-        manager: "bg-blue-500",
-        member: "bg-gray-500"
-    }
+    // ... existing ...
+    
+    // ... render ...
 
-    const statusColors = {
-        active: "text-green-600",
-        completed: "text-gray-600",
-        archived: "text-orange-600"
-    }
-
-    // Get category info
-    const categoryInfo = ENGINEERING_CATEGORIES.find(cat => cat.value === category)
-
-    const CardWrapper = isPending ? 'div' : Link
-    const wrapperProps = isPending ? {} : { href: `/projects/${id}` }
-
-    return (
-        <CardWrapper {...wrapperProps as any} className="block h-full">
-            <Card
-                className={`transition-all duration-200 border-l-4 h-full relative group flex flex-col justify-between ${isPending ? 'border-l-gray-300 cursor-default' : 'hover:shadow-lg cursor-pointer'}`}
-                style={{ borderLeftColor: isPending ? undefined : (color || undefined) }}
-            >
-                {/* Pending Notification Dot (Desktop primarily, but fine on mobile too) */}
-                {isPending && (
-                    <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 border-2 border-background z-10 animate-pulse" />
-                )}
-
-                <CardContent className="p-4 space-y-3 relative flex-grow">
-                    {/* Desktop Hover Overlay for Pending Actions */}
-                    {isPending && (
-                        <div className="hidden md:flex absolute inset-0 bg-background/95 backdrop-blur-[1px] z-20 flex-col items-center justify-center gap-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 text-center border">
-                            <p className="text-sm font-semibold">Join this project?</p>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={(e) => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                        if (onRespond) onRespond(false)
-                                    }}
-                                    className="h-8 px-4 rounded-md bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors shadow-sm"
-                                >
-                                    Decline
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                        if (onRespond) onRespond(true)
-                                    }}
-                                    className="h-8 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
-                                >
-                                    Accept
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Header with Icon */}
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="text-2xl flex-shrink-0">{project_icon}</span>
-                            <h3 className="font-semibold truncate">{title}</h3>
-                        </div>
-                        <Badge
-                            variant="secondary"
-                            className={`${roleColors[role]} text-white text-xs flex-shrink-0`}
-                        >
-                            {role}
-                        </Badge>
-                    </div>
-
-                    {/* Category Badge */}
-                    {categoryInfo && (
-                        <div>
-                            <Badge variant="outline" className="text-xs">
-                                {categoryInfo.emoji} {categoryInfo.label}
-                            </Badge>
-                        </div>
-                    )}
-
-                    {/* Description */}
-                    {description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
-                            {description}
-                        </p>
-                    )}
-
-                    {/* Progress - Hide if pending to save space or just show 0? Showing it is fine. */}
-                    <div className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Progress</span>
-                            <span className="font-medium">{Math.round(progress)}%</span>
-                        </div>
-                        <Progress value={progress} className="h-2" />
-                    </div>
-
-                    {/* Footer */}
+                        {/* Footer */}
                     <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
-                        <div className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
+                        <div className="flex items-center">
+                            {/* Stacked Avatars */}
+                            <div className="flex -space-x-2 mr-2">
+                                {members.slice(0, 3).map((m, i) => (
+                                    <div key={i} className="h-6 w-6 rounded-full ring-2 ring-white dark:ring-gray-900 bg-gray-200 overflow-hidden z-[1]">
+                                        {m.avatar_url ? (
+                                            <img src={m.avatar_url} alt="member" className="h-full w-full object-cover" />
+                                        ) : (
+                                            <div className="h-full w-full flex items-center justify-center bg-primary/10 text-[8px] font-bold text-primary">
+                                                U
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                {memberCount > 3 && (
+                                    <div className="h-6 w-6 rounded-full ring-2 ring-white dark:ring-gray-900 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[9px] font-medium z-[0]">
+                                        +{memberCount - 3}
+                                    </div>
+                                )}
+                            </div>
                             <span>{memberCount} {memberCount === 1 ? 'member' : 'members'}</span>
                         </div>
                         <Badge variant="outline" className={`capitalize text-xs ${statusColors[status]}`}>

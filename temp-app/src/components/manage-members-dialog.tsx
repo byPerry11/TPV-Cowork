@@ -35,6 +35,7 @@ import {
 import { supabase } from "@/lib/supabaseClient"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { UserMultiSelect } from "@/components/user-multi-select"
+import { getRandomMemberColor } from "@/lib/utils"
 
 const memberSchema = z.object({
     username: z.string().min(3, "Select a user to add"),
@@ -170,7 +171,8 @@ export function ManageMembersDialog({ projectId }: ManageMembersDialogProps) {
                     project_id: projectId,
                     user_id: targetUserId,
                     role: values.role,
-                    status: 'pending' // Invites start as pending
+                    status: 'pending', // Invites start as pending
+                    member_color: getRandomMemberColor()
                 })
 
             if (insertError) throw insertError
@@ -192,7 +194,7 @@ export function ManageMembersDialog({ projectId }: ManageMembersDialogProps) {
                 reference_id: projectId
             })
 
-            toast.success("Member added successfully")
+            toast.success("Invitación enviada correctamente")
             form.reset()
             setSelectedUserId(null)
             fetchMembers()

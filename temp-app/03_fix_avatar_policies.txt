@@ -1,0 +1,41 @@
+-- Create 'avatars' bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Policy: Give users access to their own folder 
+
+-- DROP existing policies to avoid conflicts
+DROP POLICY IF EXISTS "Avatar Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
+
+-- SELECT (Public)
+CREATE POLICY "Avatar Public Access"
+ON storage.objects FOR SELECT
+USING ( bucket_id = 'avatars' );
+
+-- INSERT (Own Folder)
+CREATE POLICY "Users can upload their own avatar"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'avatars' AND 
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- UPDATE (Own Folder)
+CREATE POLICY "Users can update their own avatar"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'avatars' AND 
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- DELETE (Own Folder)
+CREATE POLICY "Users can delete their own avatar"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'avatars' AND 
+  (storage.foldername(name))[1] = auth.uid()::text
+);

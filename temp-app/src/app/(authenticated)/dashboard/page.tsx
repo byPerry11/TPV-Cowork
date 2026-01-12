@@ -91,13 +91,19 @@ export default function DashboardPage() {
             const completed = checkpoints?.filter(c => c.is_completed).length || 0
             progress = total > 0 ? (completed / total) * 100 : 0
 
-            // Count members
-            const { count } = await supabase
+            // Count members and get avatars
+            const { data: activeMembers, count } = await supabase
               .from("project_members")
-              .select("*", { count: "exact", head: true })
+              .select("profiles(avatar_url)", { count: "exact" })
               .eq("project_id", project.id)
               .eq("status", "active")
+            
             memberCount = count || 0
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const members = activeMembers?.map((m: any) => ({ avatar_url: m.profiles?.avatar_url })) || []
+            
+            // @ts-ignore
+            project.members = members
           }
 
           return {
@@ -246,6 +252,7 @@ export default function DashboardPage() {
                           role={project.role}
                           status={project.status}
                           memberCount={project.memberCount}
+                          members={(project as any).members}
                         />
                       ))}
                   </div>
@@ -282,6 +289,7 @@ export default function DashboardPage() {
                           role={project.role}
                           status={project.status}
                           memberCount={project.memberCount}
+                          members={(project as any).members}
                           membershipStatus={project.membershipStatus}
                           onRespond={(accept) => handleInvitationResponse(project.id, accept)}
                         />

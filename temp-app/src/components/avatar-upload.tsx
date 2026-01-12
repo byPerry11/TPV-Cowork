@@ -103,11 +103,20 @@ export function AvatarUpload({ userId }: AvatarUploadProps) {
 
             const filePath = `${userId}/avatar.jpg`
 
-            // Delete old avatar if exists
+            // Delete old avatar if exists (Handle cache busters)
             if (avatarUrl) {
-                const oldPath = avatarUrl.split('/').pop()
-                if (oldPath) {
-                    await supabase.storage.from('avatars').remove([`${userId}/${oldPath}`])
+                try {
+                    // Extract filename from URL (remove query params)
+                    const cleanUrl = avatarUrl.split('?')[0]
+                    const oldPath = cleanUrl.split('/').pop()
+                    
+                    if (oldPath) {
+                        // We always use 'avatar.jpg' now, but just in case old legacy names exist
+                        await supabase.storage.from('avatars').remove([`${userId}/${oldPath}`])
+                    }
+                } catch (e) {
+                    console.warn("Failed to cleanup old avatar", e)
+                    // Continue anyway, upsert should handle it
                 }
             }
 
@@ -116,7 +125,10 @@ export function AvatarUpload({ userId }: AvatarUploadProps) {
                 .from('avatars')
                 .upload(filePath, processedFile, { upsert: true })
 
-            if (uploadError) throw uploadError
+            if (uploadError) {
+                console.error("Supabase Upload Error:", uploadError) 
+                throw uploadError
+            }
 
             // Get public URL with cache buster
             const { data: { publicUrl } } = supabase.storage
