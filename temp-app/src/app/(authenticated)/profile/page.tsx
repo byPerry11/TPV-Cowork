@@ -19,12 +19,15 @@ import { ProfileEditForm } from "@/components/profile-edit-form"
 import { AvatarUpload } from "@/components/avatar-upload"
 import { AchievementsDisplay } from "@/components/achievements-display"
 import { FriendManager } from "@/components/friend-manager"
+import { SettingsDialog } from "@/components/settings-dialog"
+import { Settings as SettingsIcon } from "lucide-react"
 
 export default function ProfilePage() {
     const router = useRouter()
     const [loading, setLoading] = useState(true)
     const [userId, setUserId] = useState<string | null>(null)
     const [isEditMode, setIsEditMode] = useState(false)
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
     const [profile, setProfile] = useState<{
         username: string
@@ -139,7 +142,19 @@ export default function ProfilePage() {
                 <div className="container mx-auto max-w-5xl p-4 md:p-6 space-y-6 pb-24 md:pb-6">
                     {/* Instagram-style Header */}
                     <Card>
-                        <CardContent className="p-6 md:p-8">
+                        <CardContent className="p-6 md:p-8 relative">
+                            {/* Settings Button */}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-4 right-4 md:top-6 md:right-6 text-muted-foreground hover:text-foreground z-10"
+                                onClick={() => setIsSettingsOpen(true)}
+                            >
+                                <SettingsIcon className="h-5 w-5" />
+                            </Button>
+
+                            <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+
                             <div className="flex flex-col md:flex-row gap-6 md:gap-8">
                                 {/* Avatar with Status Indicator */}
                                 <div className="flex justify-center md:justify-start">
