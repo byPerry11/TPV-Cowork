@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, UserPlus, UserCheck, Loader2, User } from "lucide-react"
+import { Search, UserPlus, UserCheck, Loader2, User, Check } from "lucide-react"
 import { supabase } from "@/lib/supabaseClient"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -24,6 +24,8 @@ export function UserSearch() {
     const [results, setResults] = useState<Profile[]>([])
     const [loading, setLoading] = useState(false)
     const [requestStatus, setRequestStatus] = useState<Record<string, string>>({})
+    const [sendingMap, setSendingMap] = useState<Record<string, boolean>>({})
+    const [successMap, setSuccessMap] = useState<Record<string, boolean>>({})
 
     useEffect(() => {
         const getUser = async () => {
@@ -59,7 +61,7 @@ export function UserSearch() {
 
             if (error) throw error
             setResults(data || [])
-            
+
             // Check status for these users
             if (data && data.length > 0 && userId) {
                 const { data: statusData } = await supabase
@@ -67,12 +69,12 @@ export function UserSearch() {
                     .select('receiver_id, status')
                     .eq('sender_id', userId)
                     .in('receiver_id', data.map((u: any) => u.id))
-                
+
                 const statusMap: Record<string, string> = {}
                 statusData?.forEach((r: any) => {
                     statusMap[r.receiver_id] = r.status
                 })
-                
+
                 setRequestStatus(statusMap)
             }
 
@@ -85,6 +87,9 @@ export function UserSearch() {
 
     const sendRequest = async (receiverId: string) => {
         if (!userId) return
+
+        setSendingMap(prev => ({ ...prev, [receiverId]: true }))
+
         try {
             const { error } = await supabase
                 .from('friend_requests')
@@ -92,13 +97,30 @@ export function UserSearch() {
                     sender_id: userId,
                     receiver_id: receiverId
                 })
-            
+
             if (error) throw error
-            toast.success("Friend request sent!")
+
+            // Success state
+            setSendingMap(prev => ({ ...prev, [receiverId]: false }))
+            setSuccessMap(prev => ({ ...prev, [receiverId]: true }))
             setRequestStatus(prev => ({ ...prev, [receiverId]: 'pending' }))
+
+            // Close after delay
+            setTimeout(() => {
+                setOpen(false)
+                // Clean up success state after closing
+                setSuccessMap(prev => {
+                    const newMap = { ...prev }
+                    delete newMap[receiverId]
+                    return newMap
+                })
+            }, 1000)
+
         } catch (error: any) {
+            setSendingMap(prev => ({ ...prev, [receiverId]: false }))
             if (error.code === '23505') {
                 toast.error("Request already sent")
+                setRequestStatus(prev => ({ ...prev, [receiverId]: 'pending' }))
             } else {
                 toast.error("Failed to send request")
             }
@@ -111,8 +133,8 @@ export function UserSearch() {
                 <PopoverAnchor asChild>
                     <div className="relative">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                            placeholder="Search users..." 
+                        <Input
+                            placeholder="Search users..."
                             className="pl-8"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
@@ -120,9 +142,9 @@ export function UserSearch() {
                         />
                     </div>
                 </PopoverAnchor>
-                <PopoverContent 
-                    className="p-0" 
-                    align="start" 
+                <PopoverContent
+                    className="p-0"
+                    align="start"
                     onOpenAutoFocus={(e) => e.preventDefault()}
                 >
                     <Command>
@@ -133,7 +155,7 @@ export function UserSearch() {
                             )}
                             {results.length > 0 && (
                                 <CommandGroup heading="Users">
-                                     {results.map((user) => (
+                                    {results.map((user) => (
                                         <div key={user.id} className="flex items-center justify-between p-2 hover:bg-accent rounded-sm">
                                             <div className="flex items-center gap-2">
                                                 <Avatar className="h-8 w-8">
@@ -145,13 +167,21 @@ export function UserSearch() {
                                                     <span className="text-xs text-muted-foreground">@{user.username}</span>
                                                 </div>
                                             </div>
-                                            {requestStatus[user.id] === 'accepted' ? (
+                                            {successMap[user.id] ? (
+                                                <Button size="icon" variant="ghost" disabled className="h-8 w-8 text-green-500">
+                                                    <Check className="h-4 w-4 animate-in zoom-in spin-in-90 duration-300" />
+                                                </Button>
+                                            ) : sendingMap[user.id] ? (
+                                                <Button size="icon" variant="ghost" disabled className="h-8 w-8">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                </Button>
+                                            ) : requestStatus[user.id] === 'accepted' ? (
                                                 <Button size="icon" variant="ghost" disabled className="h-8 w-8 text-green-500">
                                                     <UserCheck className="h-4 w-4" />
                                                 </Button>
                                             ) : requestStatus[user.id] === 'pending' ? (
-                                                <Button size="icon" variant="ghost" disabled className="h-8 w-8">
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                <Button size="icon" variant="ghost" disabled className="h-8 w-8 text-muted-foreground" title="Request Pending">
+                                                    <UserCheck className="h-4 w-4 opacity-50" />
                                                 </Button>
                                             ) : (
                                                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => sendRequest(user.id)}>
