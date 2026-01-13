@@ -4,8 +4,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
-import { Users } from "lucide-react"
 import { ENGINEERING_CATEGORIES } from "@/lib/project-constants"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface ProjectCardProps {
     id: string
@@ -63,7 +63,7 @@ export function ProjectCard({
                 className={`transition-all duration-200 border-l-4 h-full relative group flex flex-col justify-between ${isPending ? 'border-l-gray-300 cursor-default' : 'hover:shadow-lg cursor-pointer'}`}
                 style={{ borderLeftColor: isPending ? undefined : (color || undefined) }}
             >
-                {/* Pending Notification Dot (Desktop primarily, but fine on mobile too) */}
+                {/* Pending Notification Dot */}
                 {isPending && (
                     <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 border-2 border-background z-10 animate-pulse" />
                 )}
@@ -128,7 +128,7 @@ export function ProjectCard({
                         </p>
                     )}
 
-                    {/* Progress - Hide if pending to save space or just show 0? Showing it is fine. */}
+                    {/* Progress */}
                     <div className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Progress</span>
@@ -143,18 +143,15 @@ export function ProjectCard({
                             {/* Stacked Avatars */}
                             <div className="flex -space-x-2 mr-2">
                                 {members.slice(0, 3).map((m, i) => (
-                                    <div key={i} className="h-6 w-6 rounded-full ring-2 ring-white dark:ring-black bg-gray-200 overflow-hidden z-[1]">
-                                        {m.avatar_url ? (
-                                            <img src={m.avatar_url} alt="member" className="h-full w-full object-cover" />
-                                        ) : (
-                                            <div className="h-full w-full flex items-center justify-center bg-primary/10 text-[8px] font-bold text-primary">
-                                                U
-                                            </div>
-                                        )}
-                                    </div>
+                                    <Avatar key={i} className="h-6 w-6 border-2 border-background ring-1 ring-border">
+                                        <AvatarImage src={m.avatar_url || ""} />
+                                        <AvatarFallback className="text-[8px] bg-muted text-muted-foreground font-bold">
+                                            U
+                                        </AvatarFallback>
+                                    </Avatar>
                                 ))}
                                 {memberCount > 3 && (
-                                    <div className="h-6 w-6 rounded-full ring-2 ring-white dark:ring-black bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[9px] font-medium z-[0]">
+                                    <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[9px] font-medium text-muted-foreground ring-1 ring-border z-10">
                                         +{memberCount - 3}
                                     </div>
                                 )}

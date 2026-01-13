@@ -100,41 +100,27 @@ function ProjectDetailContent() {
         setProject(projectData)
         setTempDescription(projectData.description || "")
 
-        // Fetch members (raw, no join)
-        const { data: membersRaw, error: membersError } = await supabase
+        // Fetch members with profiles joined
+        const { data: membersData, error: membersError } = await supabase
           .from("project_members")
-          .select("user_id, role, status, member_color")
+          .select(`
+            user_id, 
+            role, 
+            status, 
+            member_color,
+            profile:profiles(
+              username,
+              display_name,
+              avatar_url
+            )
+          `)
           .eq("project_id", id)
 
         if (membersError) {
           console.error("Error fetching members:", membersError)
         } else {
-          // Manually fetch profiles
-          const userIds = membersRaw?.map(m => m.user_id) || []
-          let profiles: any[] = []
-
-          if (userIds.length > 0) {
-            const { data: profilesData } = await supabase
-              .from('profiles')
-              .select('id, username, display_name, avatar_url')
-              .in('id', userIds)
-            profiles = profilesData || []
-          }
-
-          // Merge data
-          const mergedMembers = membersRaw?.map(member => {
-            const profile = profiles.find(p => p.id === member.user_id)
-            return {
-              ...member,
-              profile: profile ? {
-                username: profile.username,
-                display_name: profile.display_name,
-                avatar_url: profile.avatar_url
-              } : null
-            }
-          }) || []
-
-          setMembers(mergedMembers)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setMembers(membersData || [])
         }
 
       } catch (err) {
@@ -177,6 +163,8 @@ function ProjectDetailContent() {
         .order("order", { ascending: true });
 
       if (error) throw error
+
+      console.log("Checkpoints Data Raw:", data)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formattedData = (data as any[])?.map(item => ({
