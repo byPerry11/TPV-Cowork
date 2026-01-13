@@ -32,11 +32,26 @@ Un temporizador Pomodoro completamente funcional que ayuda a mantener la concent
 
 - **Almacenamiento persistente:** Todas las sesiones se guardan en Supabase
 
+#### 🆕 Mini Timer Flotante (Persistente)
+
+Cuando inicias una sesión de Pomodoro y cierras el menú Tools para navegar por la app:
+
+- **Mini timer flotante:** Aparece un widget compacto en la esquina inferior derecha
+- **Siempre visible:** El timer permanece activo mientras navegas por cualquier página
+- **Controles rápidos:** 
+  - Click para expandir/colapsar
+  - Botón de pausa/continuar
+  - Indicador de progreso circular
+- **Animación de pulso:** El widget tiene una animación sutil cuando está corriendo
+- **Expandible:** Click en el mini timer para ver más controles
+- **Descartable:** Opción de cerrar el mini timer (reinicia la sesión)
+
 #### Uso:
 1. Abre el menú Tools desde tu perfil
 2. Selecciona la pestaña "Pomodoro"
 3. Haz clic en "Iniciar" para comenzar una sesión de trabajo
-4. El temporizador te guiará automáticamente entre trabajo y descansos
+4. **¡Navega libremente!** El timer seguirá corriendo
+5. El mini timer aparecerá en la esquina para que controles tu sesión
 
 ---
 

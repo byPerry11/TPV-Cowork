@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { supabase } from "@/lib/supabaseClient"
+import { checkAchievementsAndNotify } from "@/lib/achievements"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -149,7 +150,7 @@ export function EvidenceForm({ checkpointId, onSuccess, onCancel }: EvidenceForm
         .eq("id", checkpointId)
         .single()
 
-       // Update Checkpoint
+      // Update Checkpoint
       await supabase
         .from("checkpoints")
         .update({
@@ -161,27 +162,31 @@ export function EvidenceForm({ checkpointId, onSuccess, onCancel }: EvidenceForm
 
       // Notify other members
       if (cpData) {
-          const { data: members } = await supabase
-            .from('project_members')
-            .select('user_id')
-            .eq('project_id', cpData.project_id)
-            .neq('user_id', session.user.id) // Don't notify self
+        const { data: members } = await supabase
+          .from('project_members')
+          .select('user_id')
+          .eq('project_id', cpData.project_id)
+          .neq('user_id', session.user.id) // Don't notify self
 
-          if (members && members.length > 0) {
-              const notifications = members.map(m => ({
-                  user_id: m.user_id,
-                  type: 'checkpoint_completed',
-                  title: 'Checkpoint Completed',
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  message: `A task has been completed in ${(cpData.project as any)?.title || 'Project'}`, 
-                  reference_id: cpData.project_id
-              }))
-              
-              await supabase.from('notifications').insert(notifications)
-          }
+        if (members && members.length > 0) {
+          const notifications = members.map(m => ({
+            user_id: m.user_id,
+            type: 'checkpoint_completed',
+            title: 'Checkpoint Completed',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            message: `A task has been completed in ${(cpData.project as any)?.title || 'Project'}`,
+            reference_id: cpData.project_id
+          }))
+
+          await supabase.from('notifications').insert(notifications)
+        }
       }
 
       toast.success("Evidence saved successfully!")
+
+      // Check and unlock achievements for checkpoint completion
+      await checkAchievementsAndNotify(session.user.id, 'checkpoint_completed')
+
       form.reset()
       setFile(null)
       onSuccess?.()
@@ -198,14 +203,14 @@ export function EvidenceForm({ checkpointId, onSuccess, onCancel }: EvidenceForm
   return (
     <>
       <Form {...form}>
-        <form 
-          onSubmit={form.handleSubmit(onSubmit)} 
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
           className="relative flex flex-col gap-4"
           onDragEnter={handleDrag}
         >
           {/* Drag Overlay */}
           {dragActive && (
-            <div 
+            <div
               className="absolute inset-0 z-50 bg-primary/10 border-2 border-dashed border-primary rounded-lg flex items-center justify-center backdrop-blur-sm"
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -220,7 +225,7 @@ export function EvidenceForm({ checkpointId, onSuccess, onCancel }: EvidenceForm
             flex flex-col gap-2 p-4 rounded-xl border-2 transition-colors min-h-[200px]
             ${dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/20 bg-card'}
           `}>
-            
+
             {/* Text Input Area */}
             <FormField
               control={form.control}
@@ -298,18 +303,18 @@ export function EvidenceForm({ checkpointId, onSuccess, onCancel }: EvidenceForm
               </div>
 
               <div className="flex items-center gap-2">
-                <Button 
-                  type="button" 
-                  variant="ghost" 
+                <Button
+                  type="button"
+                  variant="ghost"
                   size="sm"
                   onClick={handleCancel}
                   className="text-muted-foreground hover:text-foreground"
                 >
                   Cancel
                 </Button>
-                <Button 
-                  type="submit" 
-                  size="sm" 
+                <Button
+                  type="submit"
+                  size="sm"
                   disabled={isLoading || (!noteContent && !file)}
                   className="gap-1.5 rounded-full px-4"
                 >
@@ -332,7 +337,7 @@ export function EvidenceForm({ checkpointId, onSuccess, onCancel }: EvidenceForm
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Editing</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => {
                 setShowUnsavedAlert(false)
                 onCancel?.()

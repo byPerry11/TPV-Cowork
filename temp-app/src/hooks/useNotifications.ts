@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { supabase } from "@/lib/supabaseClient"
+import { checkAchievementsAndNotify } from "@/lib/achievements"
 import { toast } from "sonner"
 
 export interface FriendRequest {
@@ -187,6 +188,9 @@ export function useNotifications() {
                 return
             }
             toast.success("Joined project successfully")
+
+            // Check and unlock achievements for joining a project
+            await checkAchievementsAndNotify(user.id, 'project_joined')
         } else {
             const { error } = await supabase
                 .from("project_members")

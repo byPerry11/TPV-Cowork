@@ -45,6 +45,7 @@ import { ColorPicker } from "@/components/color-picker"
 import { EmojiPicker } from "@/components/emoji-picker"
 import { UserMultiSelect } from "@/components/user-multi-select"
 import { ENGINEERING_CATEGORIES } from "@/lib/project-constants"
+import { checkAchievementsAndNotify } from "@/lib/achievements"
 
 const projectSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -143,6 +144,10 @@ export function CreateProjectDialog({ onSuccess }: CreateProjectDialogProps) {
       }
 
       toast.success("Proyecto creado exitosamente")
+
+      // Check and unlock achievements for project creation
+      await checkAchievementsAndNotify(session.user.id, 'project_created')
+
       setOpen(false)
       form.reset()
       setInvitedUsers([]) // Reset invitations

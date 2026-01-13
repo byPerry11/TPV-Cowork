@@ -1,215 +1,39 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabaseClient"
+import { useEffect } from "react"
+import { usePomodoro, WORK_DURATION, SHORT_BREAK, LONG_BREAK } from "@/contexts/pomodoro-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Play, Pause, SkipForward, RotateCcw, Coffee, Brain, Moon } from "lucide-react"
-import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 
-type PomodoroPhase = 'work' | 'shortBreak' | 'longBreak'
-
-interface PomodoroSession {
-    id?: string
-    user_id: string
-    phase: PomodoroPhase
-    duration_minutes: number
-    completed: boolean
-    started_at: string
-    ended_at?: string
-}
-
-interface PomodoroStats {
-    todaySessions: number
-    totalSessions: number
-    totalMinutes: number
-}
-
-const WORK_DURATION = 25 * 60 // 25 minutos en segundos
-const SHORT_BREAK = 5 * 60 // 5 minutos
-const LONG_BREAK = 15 * 60 // 15 minutos
-const SESSIONS_BEFORE_LONG_BREAK = 4
-
 export function PomodoroTimer({ userId }: { userId: string }) {
-    const [phase, setPhase] = useState<PomodoroPhase>('work')
-    const [timeLeft, setTimeLeft] = useState(WORK_DURATION)
-    const [isRunning, setIsRunning] = useState(false)
-    const [sessionCount, setSessionCount] = useState(0)
-    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
-    const [stats, setStats] = useState<PomodoroStats>({
-        todaySessions: 0,
-        totalSessions: 0,
-        totalMinutes: 0
-    })
+    const {
+        phase,
+        timeLeft,
+        isRunning,
+        sessionCount,
+        currentSessionId,
+        stats,
+        setUserId,
+        startSession,
+        pauseSession,
+        resumeSession,
+        resetSession,
+        skipPhase,
+        loadStats
+    } = usePomodoro()
 
-    // Cargar estadísticas al montar
+    // Setear el userId cuando el componente se monta
+    useEffect(() => {
+        setUserId(userId)
+    }, [userId, setUserId])
+
+    // Recargar stats cuando se monta
     useEffect(() => {
         loadStats()
-    }, [userId])
-
-    // Timer effect
-    useEffect(() => {
-        let interval: NodeJS.Timeout | null = null
-
-        if (isRunning && timeLeft > 0) {
-            interval = setInterval(() => {
-                setTimeLeft(prev => {
-                    if (prev <= 1) {
-                        handlePhaseComplete()
-                        return 0
-                    }
-                    return prev - 1
-                })
-            }, 1000)
-        }
-
-        return () => {
-            if (interval) clearInterval(interval)
-        }
-    }, [isRunning, timeLeft])
-
-    const loadStats = async () => {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-
-        // Sesiones de hoy
-        const { count: todayCount } = await supabase
-            .from('pomodoro_sessions')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', userId)
-            .eq('completed', true)
-            .gte('started_at', today.toISOString())
-
-        // Sesiones totales
-        const { count: totalCount } = await supabase
-            .from('pomodoro_sessions')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', userId)
-            .eq('completed', true)
-
-        // Total de minutos
-        const { data: sessions } = await supabase
-            .from('pomodoro_sessions')
-            .select('duration_minutes')
-            .eq('user_id', userId)
-            .eq('completed', true)
-
-        const totalMinutes = sessions?.reduce((sum, s) => sum + s.duration_minutes, 0) || 0
-
-        setStats({
-            todaySessions: todayCount || 0,
-            totalSessions: totalCount || 0,
-            totalMinutes
-        })
-    }
-
-    const startSession = async () => {
-        const duration = phase === 'work' ? 25 : phase === 'shortBreak' ? 5 : 15
-
-        const { data, error } = await supabase
-            .from('pomodoro_sessions')
-            .insert({
-                user_id: userId,
-                phase,
-                duration_minutes: duration,
-                completed: false,
-                started_at: new Date().toISOString()
-            })
-            .select()
-            .single()
-
-        if (error) {
-            toast.error("Error al iniciar sesión")
-            console.error(error)
-            return
-        }
-
-        setCurrentSessionId(data.id)
-        setIsRunning(true)
-    }
-
-    const completeSession = async () => {
-        if (!currentSessionId) return
-
-        const { error } = await supabase
-            .from('pomodoro_sessions')
-            .update({
-                completed: true,
-                ended_at: new Date().toISOString()
-            })
-            .eq('id', currentSessionId)
-
-        if (error) {
-            console.error("Error al completar sesión:", error)
-            return
-        }
-
-        loadStats()
-    }
-
-    const handlePhaseComplete = async () => {
-        setIsRunning(false)
-        await completeSession()
-
-        // Determinar siguiente fase
-        if (phase === 'work') {
-            const newCount = sessionCount + 1
-            setSessionCount(newCount)
-
-            if (newCount % SESSIONS_BEFORE_LONG_BREAK === 0) {
-                setPhase('longBreak')
-                setTimeLeft(LONG_BREAK)
-                toast.success("¡Tiempo de descanso largo! 🎉")
-            } else {
-                setPhase('shortBreak')
-                setTimeLeft(SHORT_BREAK)
-                toast.success("¡Tiempo de descanso corto! ☕")
-            }
-        } else {
-            setPhase('work')
-            setTimeLeft(WORK_DURATION)
-            toast.success("¡Tiempo de concentración! 🧠")
-        }
-
-        setCurrentSessionId(null)
-    }
-
-    const handleSkip = async () => {
-        if (currentSessionId) {
-            // Marcar como no completada pero con ended_at
-            await supabase
-                .from('pomodoro_sessions')
-                .update({
-                    completed: false,
-                    ended_at: new Date().toISOString()
-                })
-                .eq('id', currentSessionId)
-        }
-
-        setIsRunning(false)
-        handlePhaseComplete()
-    }
-
-    const handleReset = () => {
-        setIsRunning(false)
-        setCurrentSessionId(null)
-        const duration = phase === 'work' ? WORK_DURATION : phase === 'shortBreak' ? SHORT_BREAK : LONG_BREAK
-        setTimeLeft(duration)
-    }
-
-    const handlePlayPause = () => {
-        if (isRunning) {
-            setIsRunning(false)
-        } else {
-            if (!currentSessionId) {
-                startSession()
-            } else {
-                setIsRunning(true)
-            }
-        }
-    }
+    }, [loadStats])
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60)
@@ -250,6 +74,18 @@ export function PomodoroTimer({ userId }: { userId: string }) {
     const PhaseIcon = phaseInfo.icon
     const progress = ((phaseInfo.total - timeLeft) / phaseInfo.total) * 100
 
+    const handlePlayPause = () => {
+        if (isRunning) {
+            pauseSession()
+        } else {
+            if (!currentSessionId) {
+                startSession()
+            } else {
+                resumeSession()
+            }
+        }
+    }
+
     return (
         <Card className="w-full">
             <CardHeader>
@@ -282,12 +118,21 @@ export function PomodoroTimer({ userId }: { userId: string }) {
                 {/* Barra de progreso */}
                 <Progress value={progress} className="h-2" />
 
+                {/* Info de sesión activa */}
+                {currentSessionId && (
+                    <div className="text-center">
+                        <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
+                            ✨ Sesión activa - El timer seguirá corriendo mientras navegas
+                        </Badge>
+                    </div>
+                )}
+
                 {/* Controles */}
                 <div className="flex items-center justify-center gap-3">
                     <Button
                         variant="outline"
                         size="icon"
-                        onClick={handleReset}
+                        onClick={resetSession}
                         disabled={!currentSessionId && timeLeft === phaseInfo.total}
                     >
                         <RotateCcw className="h-4 w-4" />
@@ -314,7 +159,7 @@ export function PomodoroTimer({ userId }: { userId: string }) {
                     <Button
                         variant="outline"
                         size="icon"
-                        onClick={handleSkip}
+                        onClick={skipPhase}
                         disabled={!isRunning && !currentSessionId}
                     >
                         <SkipForward className="h-4 w-4" />
