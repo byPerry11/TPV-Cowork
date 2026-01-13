@@ -143,7 +143,7 @@ export function ProjectCard({
                             {/* Stacked Avatars */}
                             <div className="flex -space-x-2 mr-2">
                                 {members.slice(0, 3).map((m, i) => (
-                                    <div key={i} className="h-6 w-6 rounded-full ring-2 ring-white dark:ring-gray-900 bg-gray-200 overflow-hidden z-[1]">
+                                    <div key={i} className="h-6 w-6 rounded-full ring-2 ring-white dark:ring-black bg-gray-200 overflow-hidden z-[1]">
                                         {m.avatar_url ? (
                                             <img src={m.avatar_url} alt="member" className="h-full w-full object-cover" />
                                         ) : (
@@ -154,7 +154,7 @@ export function ProjectCard({
                                     </div>
                                 ))}
                                 {memberCount > 3 && (
-                                    <div className="h-6 w-6 rounded-full ring-2 ring-white dark:ring-gray-900 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[9px] font-medium z-[0]">
+                                    <div className="h-6 w-6 rounded-full ring-2 ring-white dark:ring-black bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[9px] font-medium z-[0]">
                                         +{memberCount - 3}
                                     </div>
                                 )}
