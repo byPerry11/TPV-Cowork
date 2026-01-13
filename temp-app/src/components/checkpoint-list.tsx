@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Checkpoint } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Circle, Camera, GripVertical, ChevronDown, User as UserIcon } from "lucide-react";
+import { CheckCircle2, Circle, Camera, GripVertical, ChevronDown, User as UserIcon, X as XIcon } from "lucide-react";
 import { EvidenceForm } from "@/components/evidence-form";
 import { EvidenceViewer } from "@/components/evidence-viewer";
 import { CheckpointTasksList } from "@/components/checkpoint-tasks-list";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabaseClient";
 import {
   Dialog,
   DialogContent,
@@ -60,9 +62,6 @@ function SortableCheckpointItem({
   // Find completer color if completed
   let cardStyle = {};
 
-  // Find assigned member
-  const assignedMember = checkpoint.assigned_to ? members.find((m: any) => m.user_id === checkpoint.assigned_to) : null;
-
   if (checkpoint.is_completed && checkpoint.completed_by) {
     const completer = members.find(
       (m: any) => m.user_id === checkpoint.completed_by,
@@ -78,6 +77,33 @@ function SortableCheckpointItem({
   }
 
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showAssignees, setShowAssignees] = useState(false);
+
+  const assignments = checkpoint.assignments || [];
+  const displayAssignments = assignments.slice(0, 3);
+  const remaining = assignments.length - 3;
+
+  // Allow admins and owners to remove assignees. 
+  // We don't have perfect role check here without passing full context, 
+  // but we can trust userRole prop for basic UI toggle and RLS for security.
+  const canManageAssignees = userRole === 'admin' || userRole === 'owner';
+
+  const handleRemoveAssignee = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('checkpoint_assignments')
+        .delete()
+        .match({ checkpoint_id: checkpoint.id, user_id: userId })
+
+      if (error) throw error
+      toast.success("Assignee removed")
+      window.location.reload();
+
+    } catch (e) {
+      console.error(e)
+      toast.error("Failed to remove assignee")
+    }
+  }
 
   return (
     <div ref={setNodeRef} style={style} className="mb-4">
@@ -102,18 +128,6 @@ function SortableCheckpointItem({
             <div className="flex items-center gap-2">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 {checkpoint.title}
-                {/* Assigned Avatar Display */}
-                {assignedMember && (
-                  <div className="flex items-center gap-1 ml-2 bg-secondary/50 rounded-full pr-2 pl-0.5 py-0.5" title={`Assigned to ${assignedMember.profile?.display_name}`}>
-                    <Avatar className="h-5 w-5 border border-background">
-                      <AvatarImage src={assignedMember.profile?.avatar_url} />
-                      <AvatarFallback className="text-[8px]"><UserIcon className="h-3 w-3" /></AvatarFallback>
-                    </Avatar>
-                    <span className="text-[10px] font-normal text-muted-foreground max-w-[60px] truncate">
-                      {assignedMember.profile?.display_name || "User"}
-                    </span>
-                  </div>
-                )}
               </CardTitle>
               <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
             </div>
@@ -141,7 +155,67 @@ function SortableCheckpointItem({
             </div>
           )}
 
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-between items-center pt-2">
+            {/* Avatar Stack (Bottom Left) */}
+            <div className="flex items-center h-8">
+              {assignments.length > 0 && (
+                <Dialog open={showAssignees} onOpenChange={setShowAssignees}>
+                  <DialogTrigger asChild>
+                    <div
+                      className="flex -space-x-2 hover:opacity-80 transition-opacity cursor-pointer p-1 rounded-md hover:bg-muted/50 items-center"
+                      onClick={(e) => { e.stopPropagation(); }}
+                      title="Click to manage assignees"
+                    >
+                      {displayAssignments.map((a) => (
+                        <Avatar key={a.user_id} className="h-6 w-6 border-2 border-background ring-1 ring-border">
+                          <AvatarImage src={a.profile?.avatar_url || ""} />
+                          <AvatarFallback className="text-[8px] bg-muted text-muted-foreground">
+                            {a.profile?.username?.slice(0, 2).toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                      ))}
+                      {remaining > 0 && (
+                        <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[9px] font-medium text-muted-foreground ring-1 ring-border z-10">
+                          +{remaining}
+                        </div>
+                      )}
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Checkpoint Assignees</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      {assignments.map(a => (
+                        <div key={a.user_id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={a.profile?.avatar_url || ""} />
+                              <AvatarFallback>U</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium text-sm">{a.profile?.display_name || a.profile?.username || "Unknown"}</span>
+                          </div>
+                          {canManageAssignees && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              onClick={() => handleRemoveAssignee(a.user_id)}
+                            >
+                              <XIcon className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      {assignments.length === 0 && (
+                        <p className="text-center text-muted-foreground text-sm">No users assigned.</p>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
+
             <Dialog>
               <DialogTrigger asChild>
                 <Button
