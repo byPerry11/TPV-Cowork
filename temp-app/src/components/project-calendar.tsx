@@ -3,12 +3,11 @@
 import * as React from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { isSameDay, format, parseISO } from "date-fns"
 import { supabase } from "@/lib/supabaseClient"
 import { useEffect, useState } from "react"
 
-// Define exact same interface as in page.tsx to match
+// Exact same interface as in page.tsx to match
 interface MemberProfile {
     user_id: string;
     role: string;
@@ -62,11 +61,7 @@ export function ProjectCalendar({ projectId, startDate, endDate, members, classN
         }
     }, [projectId, members])
 
-    // Create dynamic modifiers for each unique user/color group
-    // Actually, react-day-picker 101: One modifier per style. 
-    // If multiple users have same color, can group.
-    // If same user has multiple dates, group.
-
+    // Create dynamic modifiers
     const userModifiers: Record<string, Date[]> = {}
     const userStyles: Record<string, React.CSSProperties> = {}
 
@@ -86,10 +81,6 @@ export function ProjectCalendar({ projectId, startDate, endDate, members, classN
             userModifiers[key].push(item.date)
         }
     })
-
-    // Priority: Start/End > User Completion? Or User Completion > Start/End?
-    // User probably wants to see activity.
-    // Let's merge modifiers.
 
     const modifiers = {
         start: startDate,

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { Loader2, User, FileText, Calendar } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
-import { format } from "date-fns"
+// import { format } from "date-fns" // Unused import
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,15 +12,16 @@ import { Star } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent } from "@/components/ui/card"
 import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogTrigger,
 } from "@/components/ui/dialog"
 import { Maximize2 } from "lucide-react"
 
 interface EvidenceViewerProps {
     checkpointId: string
     userRole: string | null
+    onSuccess?: () => void
 }
 
 interface EvidenceRecord {
@@ -33,7 +34,7 @@ interface EvidenceRecord {
     }
 }
 
-export function EvidenceViewer({ checkpointId, userRole }: EvidenceViewerProps) {
+export function EvidenceViewer({ checkpointId, userRole, onSuccess }: EvidenceViewerProps) {
     const [evidence, setEvidence] = useState<EvidenceRecord | null>(null)
     const [loading, setLoading] = useState(true)
 
@@ -140,10 +141,14 @@ export function EvidenceViewer({ checkpointId, userRole }: EvidenceViewerProps) 
             <Separator />
 
             {/* Admin Review Section */}
-            <ReviewSection checkpointId={checkpointId} userRole={userRole} />
+            <ReviewSection
+                checkpointId={checkpointId}
+                userRole={userRole}
+                onSuccess={onSuccess}
+            />
 
-            <Separator /> 
-            
+            <Separator />
+
             <div className="flex flex-col gap-1 text-xs text-muted-foreground pt-2 border-t">
                 <div className="flex items-center gap-2">
                     <User className="h-3 w-3" />
@@ -158,7 +163,15 @@ export function EvidenceViewer({ checkpointId, userRole }: EvidenceViewerProps) 
     )
 }
 
-function ReviewSection({ checkpointId, userRole }: { checkpointId: string, userRole: string | null }) {
+function ReviewSection({
+    checkpointId,
+    userRole,
+    onSuccess
+}: {
+    checkpointId: string,
+    userRole: string | null,
+    onSuccess?: () => void
+}) {
     const [rating, setRating] = useState<string>("")
     const [comment, setComment] = useState("")
     const [isSaving, setIsSaving] = useState(false)
@@ -175,7 +188,7 @@ function ReviewSection({ checkpointId, userRole }: { checkpointId: string, userR
                 .select('rating, admin_comment')
                 .eq('id', checkpointId)
                 .single()
-            
+
             if (data) {
                 if (data.rating !== null || data.admin_comment) {
                     setHasReview(true)
@@ -232,28 +245,29 @@ function ReviewSection({ checkpointId, userRole }: { checkpointId: string, userR
                     await supabase.from('evidences').delete().eq('id', evidenceData.id)
                 }
 
-                toast.error("Checkpoint Rejected", { 
+                toast.error("Checkpoint Rejected", {
                     description: `Rating ${numRating}/10. Member will be notified to resubmit.`
                 })
-                
-                // Refresh page to show updated state
-                window.location.reload()
+
+                // Refresh logic
+                if (onSuccess) onSuccess()
             } else {
                 // APPROVAL FLOW (rating > 6)
                 const { error } = await supabase
                     .from('checkpoints')
-                    .update({ 
+                    .update({
                         rating: numRating,
                         admin_comment: comment,
                         rejection_reason: null // Clear any previous rejection
-                     })
+                    })
                     .eq('id', checkpointId)
 
                 if (error) throw error
-                
+
                 toast.success("Review saved - Checkpoint Approved")
                 setHasReview(true)
                 setIsEditing(false)
+                if (onSuccess) onSuccess()
             }
         } catch (error) {
             toast.error("Failed to save review")
@@ -278,9 +292,9 @@ function ReviewSection({ checkpointId, userRole }: { checkpointId: string, userR
                     )}
                 </div>
                 <div className="flex items-center gap-4">
-                     <div className="bg-white dark:bg-black/20 rounded px-3 py-1 font-bold text-lg border">
+                    <div className="bg-white dark:bg-black/20 rounded px-3 py-1 font-bold text-lg border">
                         {rating} <span className="text-xs text-muted-foreground font-normal">/ 10</span>
-                     </div>
+                    </div>
                 </div>
                 {comment && (
                     <p className="text-sm italic text-muted-foreground">
@@ -298,11 +312,11 @@ function ReviewSection({ checkpointId, userRole }: { checkpointId: string, userR
             <div className="grid gap-4">
                 <div className="grid w-full max-w-xs items-center gap-1.5">
                     <label className="text-sm font-medium">Rating (1.0 - 10.0)</label>
-                    <Input 
-                        type="number" 
-                        step="0.1" 
-                        min="1" 
-                        max="10" 
+                    <Input
+                        type="number"
+                        step="0.1"
+                        min="1"
+                        max="10"
                         placeholder="10.0"
                         value={rating}
                         onChange={(e) => setRating(e.target.value)}
@@ -310,7 +324,7 @@ function ReviewSection({ checkpointId, userRole }: { checkpointId: string, userR
                 </div>
                 <div className="grid w-full gap-1.5">
                     <label className="text-sm font-medium">Comment</label>
-                    <Textarea 
+                    <Textarea
                         placeholder="Good job, but check..."
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}

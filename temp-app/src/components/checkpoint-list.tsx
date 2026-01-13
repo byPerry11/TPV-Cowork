@@ -256,6 +256,9 @@ function SortableCheckpointItem({
                   <EvidenceViewer
                     checkpointId={checkpoint.id}
                     userRole={userRole}
+                    onSuccess={() => {
+                      if (onRefresh) onRefresh()
+                    }}
                   />
                 ) : (
                   <EvidenceForm
