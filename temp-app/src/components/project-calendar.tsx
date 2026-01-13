@@ -8,13 +8,25 @@ import { isSameDay, format, parseISO } from "date-fns"
 import { supabase } from "@/lib/supabaseClient"
 import { useEffect, useState } from "react"
 
+// Define exact same interface as in page.tsx to match
+interface MemberProfile {
+    user_id: string;
+    role: string;
+    status: string;
+    member_color?: string;
+    profile: {
+        username: string | null;
+        display_name: string | null;
+        avatar_url: string | null;
+    } | null;
+}
+
 interface ProjectCalendarProps {
     projectId: string
     startDate: Date
     endDate?: Date
     className?: string
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    members: any[]
+    members: MemberProfile[]
 }
 
 export function ProjectCalendar({ projectId, startDate, endDate, members, className }: ProjectCalendarProps) {
@@ -31,8 +43,9 @@ export function ProjectCalendar({ projectId, startDate, endDate, members, classN
 
             if (data) {
                 // Map to dates with colors
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const dates = data.map((cp: any) => {
-                    const completer = members.find((m: any) => m.user_id === cp.completed_by)
+                    const completer = members.find((m) => m.user_id === cp.completed_by)
                     const color = completer ? (completer.role === 'admin' ? '#a855f7' : (completer.member_color || '#808080')) : '#808080'
                     return {
                         date: parseISO(cp.completed_at),
