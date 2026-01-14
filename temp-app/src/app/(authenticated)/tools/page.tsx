@@ -12,13 +12,30 @@ export default function ToolsPage() {
 
     const handleCreateWhiteboard = async () => {
         try {
-            const { data, error } = await supabase.from('whiteboards').insert({}).select().single()
+            // Get current user session
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session?.user) {
+                toast.error("You must be logged in to create a whiteboard")
+                return
+            }
+
+            const { data, error } = await supabase
+                .from('whiteboards')
+                .insert({ owner_id: session.user.id })
+                .select()
+                .single()
+
+            if (error) {
+                console.error("Error creating whiteboard:", error)
+                toast.error("Failed to create whiteboard")
+                return
+            }
+
             if (data) {
                 router.push(`/tools/whiteboard/${data.id}`)
-            } else {
-                toast.error("Failed to create whiteboard")
             }
         } catch (e) {
+            console.error("Error creating whiteboard:", e)
             toast.error("Error creating whiteboard")
         }
     }
