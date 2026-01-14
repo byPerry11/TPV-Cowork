@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: "COWork",
   description: "Collaborative Project Management",
   icons: {
-    icon: "/cowork-logo-dark.jpg",
+    icon: "/cowork-logo-dark.png",
   },
 };
 
