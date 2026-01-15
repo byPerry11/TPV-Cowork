@@ -50,7 +50,8 @@ export function AddCheckpointDialog({ projectId, onSuccess }: AddCheckpointDialo
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const form = useForm<z.infer<typeof checkpointSchema>>({
-    resolver: zodResolver(checkpointSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(checkpointSchema) as any,
     defaultValues: {
       title: "",
       description: "",
