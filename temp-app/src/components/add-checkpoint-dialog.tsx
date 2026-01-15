@@ -34,7 +34,7 @@ import { supabase } from "@/lib/supabaseClient"
 const checkpointSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
-  order: z.coerce.number().min(1, "Order must be at least 1"),
+  order: z.number().min(1, "Order must be at least 1"),
   is_vacant: z.boolean().default(false),
 })
 
@@ -174,7 +174,12 @@ export function AddCheckpointDialog({ projectId, onSuccess }: AddCheckpointDialo
                   <FormItem className="flex-1">
                     <FormLabel>Order</FormLabel>
                     <FormControl>
-                      <Input type="number" min={1} {...field} value={field.value as string | number} />
+                      <Input 
+                        type="number" 
+                        min={1} 
+                        {...field} 
+                        onChange={e => field.onChange(e.target.valueAsNumber)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
