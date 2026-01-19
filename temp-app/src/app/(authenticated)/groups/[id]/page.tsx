@@ -17,6 +17,7 @@ import { ManageGroupMembersDialog } from "@/components/manage-group-members-dial
 import { WorkGroup, WorkGroupMember, Project, Task } from "@/types"
 import { TaskBoard } from "@/components/tasks/task-board"
 import { CreateTaskDialog } from "@/components/tasks/create-task-dialog"
+import { assignMemberToTask } from "@/app/actions/tasks"
 import { DraggableMember } from "@/components/tasks/draggable-member"
 
 interface GroupProject extends Project {
@@ -166,25 +167,27 @@ export default function WorkGroupPage() {
 
             // Check if already assigned
             if (task.assignments.some(a => a.user_id === member.user_id)) {
-                toast.error("Member already assigned to this task")
+                toast.error("El miembro ya está asignado a esta tarea")
                 return
             }
 
-            // Perform assignment
+            // Perform assignment using Server Action
             try {
-                const { error } = await supabase
-                    .from('task_assignments')
-                    .insert({
-                        task_id: task.id,
-                        user_id: member.user_id
-                    })
+                const result = await assignMemberToTask({
+                    task_id: task.id,
+                    user_id: member.user_id
+                })
 
-                if (error) throw error
-                toast.success(`Assigned ${member.profile?.username} to ${task.title}`)
+                if (!result.success) {
+                    toast.error(result.error)
+                    return
+                }
+
+                toast.success(`${member.profile?.username} asignado a ${task.title}`)
                 fetchData() // Refresh
             } catch (error) {
                 console.error(error)
-                toast.error("Failed to assign member")
+                toast.error("Error al asignar el miembro")
             }
         }
     }
@@ -264,7 +267,6 @@ export default function WorkGroupPage() {
                                         {canManageGroup && (
                                             <CreateTaskDialog
                                                 groupId={id}
-                                                userId={currentUser}
                                                 onTaskCreated={fetchData}
                                             />
                                         )}
@@ -272,6 +274,7 @@ export default function WorkGroupPage() {
                                     <TaskBoard
                                         groupId={id}
                                         userId={currentUser}
+                                        userRole={members.find(m => m.user_id === currentUser)?.role || null}
                                         tasks={tasks}
                                         onTaskUpdate={fetchData}
                                     />

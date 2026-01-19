@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabaseClient"
+import { useState } from "react"
+import { joinTask } from "@/app/actions/tasks"
 import { useDroppable } from "@dnd-kit/core"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -12,15 +12,18 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 import { Task } from "@/types"
+import { TaskStatusBadge } from "@/components/tasks/task-status-badge"
+import { TaskActionsMenu } from "@/components/tasks/task-actions-menu"
 
 interface TaskBoardProps {
     groupId: string
     userId: string
+    userRole: 'admin' | 'manager' | 'member' | null
     tasks: Task[]
     onTaskUpdate: () => void
 }
 
-export function TaskBoard({ groupId, userId, tasks, onTaskUpdate }: TaskBoardProps) {
+export function TaskBoard({ groupId, userId, userRole, tasks, onTaskUpdate }: TaskBoardProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {tasks.map((task) => (
@@ -28,6 +31,7 @@ export function TaskBoard({ groupId, userId, tasks, onTaskUpdate }: TaskBoardPro
                     key={task.id}
                     task={task}
                     currentUserId={userId}
+                    userRole={userRole}
                     onUpdate={onTaskUpdate}
                 />
             ))}
@@ -35,7 +39,7 @@ export function TaskBoard({ groupId, userId, tasks, onTaskUpdate }: TaskBoardPro
     )
 }
 
-function TaskCard({ task, currentUserId, onUpdate }: { task: Task, currentUserId: string, onUpdate: () => void }) {
+function TaskCard({ task, currentUserId, userRole, onUpdate }: { task: Task, currentUserId: string, userRole: 'admin' | 'manager' | 'member' | null, onUpdate: () => void }) {
     const { setNodeRef, isOver } = useDroppable({
         id: `task-${task.id}`,
         data: {
@@ -44,21 +48,25 @@ function TaskCard({ task, currentUserId, onUpdate }: { task: Task, currentUserId
         },
     })
 
-    const handleJoin = async () => {
-        try {
-            const { error } = await supabase
-                .from('task_assignments')
-                .insert({
-                    task_id: task.id,
-                    user_id: currentUserId
-                })
+    const [isJoining, setIsJoining] = useState(false)
 
-            if (error) throw error
-            toast.success("Joined task successfully")
+    const handleJoin = async () => {
+        setIsJoining(true)
+        try {
+            const result = await joinTask(task.id)
+
+            if (!result.success) {
+                toast.error(result.error)
+                return
+            }
+
+            toast.success("Te uniste a la tarea exitosamente")
             onUpdate()
         } catch (error) {
             console.error(error)
-            toast.error("Failed to join task")
+            toast.error("Error inesperado al unirse a la tarea")
+        } finally {
+            setIsJoining(false)
         }
     }
 
@@ -74,13 +82,24 @@ function TaskCard({ task, currentUserId, onUpdate }: { task: Task, currentUserId
             )}
         >
             <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                    <CardTitle className="text-base font-semibold line-clamp-1">{task.title}</CardTitle>
-                    {task.is_free && (
-                        <Badge variant="secondary" className="text-xs">
-                            Free ({task.assignments.length}/{task.member_limit})
-                        </Badge>
-                    )}
+                <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base font-semibold line-clamp-1">{task.title}</CardTitle>
+                        <div className="flex items-center gap-2 mt-1">
+                            <TaskStatusBadge status={task.status} />
+                            {task.is_free && (
+                                <Badge variant="secondary" className="text-xs">
+                                    Libre ({task.assignments.length}/{task.member_limit || '∞'})
+                                </Badge>
+                            )}
+                        </div>
+                    </div>
+                    <TaskActionsMenu
+                        task={task}
+                        currentUserId={currentUserId}
+                        userRole={userRole}
+                        onUpdate={onUpdate}
+                    />
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -104,13 +123,13 @@ function TaskCard({ task, currentUserId, onUpdate }: { task: Task, currentUserId
 
                 {/* Actions */}
                 {task.is_free && !isAssigned && !isFull && (
-                    <Button size="sm" variant="outline" className="w-full" onClick={handleJoin}>
-                        Join Task
+                    <Button size="sm" variant="outline" className="w-full" onClick={handleJoin} disabled={isJoining}>
+                        {isJoining ? "Uniéndose..." : "Unirse a Tarea"}
                     </Button>
                 )}
                 {task.is_free && isAssigned && (
                     <Button size="sm" variant="secondary" className="w-full" disabled>
-                        Joined
+                        Unido
                     </Button>
                 )}
             </CardContent>

@@ -4,8 +4,8 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
+import { createTask } from "@/app/actions/tasks"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -42,11 +42,10 @@ type FormValues = z.infer<typeof formSchema>
 
 interface CreateTaskDialogProps {
     groupId: string
-    userId: string
     onTaskCreated?: () => void
 }
 
-export function CreateTaskDialog({ groupId, userId, onTaskCreated }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ groupId, onTaskCreated }: CreateTaskDialogProps) {
     const [open, setOpen] = useState(false)
 
     // Let useForm infer types from the resolver
@@ -61,32 +60,36 @@ export function CreateTaskDialog({ groupId, userId, onTaskCreated }: CreateTaskD
     })
 
     const isFree = form.watch("is_free")
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
+        setIsSubmitting(true)
         try {
-            const { error } = await supabase
-                .from('tasks')
-                .insert({
-                    work_group_id: groupId,
-                    title: values.title,
-                    description: values.description,
-                    is_free: values.is_free,
-                    member_limit: values.is_free ? values.member_limit : null,
-                    created_by: userId,
-                    status: 'pending'
-                })
+            const result = await createTask({
+                work_group_id: groupId,
+                title: values.title,
+                description: values.description,
+                is_free: values.is_free,
+                member_limit: values.is_free ? values.member_limit : undefined,
+            })
 
-            if (error) throw error
+            if (!result.success) {
+                toast.error(result.error)
+                return
+            }
 
-            toast.success("Task created successfully")
+            toast.success("Tarea creada exitosamente")
             setOpen(false)
             form.reset()
             onTaskCreated?.()
         } catch (error) {
             console.error(error)
-            toast.error("Failed to create task")
+            toast.error("Error inesperado al crear la tarea")
+        } finally {
+            setIsSubmitting(false)
         }
     }
+
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -174,7 +177,9 @@ export function CreateTaskDialog({ groupId, userId, onTaskCreated }: CreateTaskD
                                 )}
                             />
                         )}
-                        <Button type="submit" className="w-full">Create Task</Button>
+                        <Button type="submit" className="w-full" disabled={isSubmitting}>
+                            {isSubmitting ? "Creando..." : "Crear Tarea"}
+                        </Button>
                     </form>
                 </Form>
             </DialogContent>
