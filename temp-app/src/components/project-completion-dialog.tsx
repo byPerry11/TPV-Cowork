@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabaseClient"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -15,8 +14,9 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { CheckCircle2, Loader2, Image as ImageIcon } from "lucide-react"
 import { toast } from "sonner"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Image from "next/image"
+import { completeProject } from "@/app/actions/projects"
+import { supabase } from "@/lib/supabaseClient"
 
 interface ProjectCompletionDialogProps {
     projectId: string
@@ -84,7 +84,7 @@ export function ProjectCompletionDialog({ projectId, projectTitle, onCompleted }
                         submitted_by_name: submittedByName
                     } as EvidenceSummary
                 }))
-                
+
                 setSummary(processed.filter(Boolean) as EvidenceSummary[])
             }
         } catch (error) {
@@ -98,35 +98,24 @@ export function ProjectCompletionDialog({ projectId, projectTitle, onCompleted }
     const handleCompleteProject = async () => {
         setCompleting(true)
         try {
-            // 1. Update Project Status
-            const { error: updateError } = await supabase
-                .from('projects')
-                .update({ 
-                    // status: 'completed', // Ensure 'status' column exists in your DB or you might need to add it!
-                    end_date: new Date().toISOString()
+            const result = await completeProject({
+                project_id: projectId,
+                completion_date: new Date().toISOString(),
+            })
+
+            if (!result.success) {
+                toast.error('Error al completar proyecto', {
+                    description: result.error,
                 })
-                .eq('id', projectId)
+                return
+            }
 
-            if (updateError) throw updateError
-
-            // 2. Add Notification for System/Admin (optional, mostly for records)
-             const { data: { user } } = await supabase.auth.getUser()
-             if (user) {
-                await supabase.from('notifications').insert({
-                    user_id: user.id, // Notify self? Or maybe other admins?
-                    type: 'project_completed',
-                    title: 'Project Completed',
-                    message: `The project "${projectTitle}" has been successfully completed.`,
-                    reference_id: projectId
-                })
-             }
-
-            toast.success("Project marked as completed!")
+            toast.success('¡Proyecto marcado como completado!')
             setOpen(false)
             onCompleted()
         } catch (error) {
-            console.error("Error completing project", error)
-            toast.error("Failed to complete project")
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         } finally {
             setCompleting(false)
         }
@@ -167,14 +156,14 @@ export function ProjectCompletionDialog({ projectId, projectTitle, onCompleted }
                                                 </h4>
                                                 <span className="text-xs text-muted-foreground">{item.submitted_by_name}</span>
                                             </div>
-                                            
+
                                             {item.image_url ? (
                                                 <div className="aspect-video relative rounded-md overflow-hidden bg-black/5 border">
                                                     {/* Using regular img for external Supabase URLs to avoid Next.js config hassle immediately */}
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img 
-                                                        src={item.image_url} 
-                                                        alt="Evidence" 
+                                                    <img
+                                                        src={item.image_url}
+                                                        alt="Evidence"
                                                         className="w-full h-full object-contain"
                                                     />
                                                 </div>
@@ -202,8 +191,8 @@ export function ProjectCompletionDialog({ projectId, projectTitle, onCompleted }
                     <Button variant="outline" onClick={() => setOpen(false)}>
                         Cancel
                     </Button>
-                    <Button 
-                        className="bg-green-600 hover:bg-green-700" 
+                    <Button
+                        className="bg-green-600 hover:bg-green-700"
                         onClick={handleCompleteProject}
                         disabled={loading || completing}
                     >

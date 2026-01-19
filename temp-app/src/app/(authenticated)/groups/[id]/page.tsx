@@ -122,20 +122,49 @@ export default function WorkGroupPage() {
             // 4. Fetch Tasks
             const { data: tasksData, error: tasksError } = await supabase
                 .from('tasks')
-                .select(`
-                    *,
-                    assignments:task_assignments(
-                        user_id,
-                        user:profiles(username, avatar_url)
-                    )
-                `)
+                .select('*')
                 .eq('work_group_id', id)
                 .order('created_at', { ascending: false })
 
-            if (tasksError) console.error("Tasks error:", tasksError)
+            if (tasksError) {
+                console.error("Tasks error:", tasksError)
+                setTasks([])
+            } else if (tasksData && tasksData.length > 0) {
+                // Fetch all assignments for these tasks
+                const taskIds = tasksData.map(t => t.id)
+                const { data: assignmentsData } = await supabase
+                    .from('task_assignments')
+                    .select('task_id, user_id, assigned_at')
+                    .in('task_id', taskIds)
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            setTasks(tasksData as unknown as Task[] || [])
+                // Fetch all unique user profiles
+                const userIds = [...new Set(assignmentsData?.map(a => a.user_id) || [])]
+                const { data: profilesData } = await supabase
+                    .from('profiles')
+                    .select('id, username, avatar_url')
+                    .in('id', userIds)
+
+                // Create a map of profiles for quick lookup
+                const profilesMap = new Map(
+                    profilesData?.map(p => [p.id, p]) || []
+                )
+
+                // Combine data
+                const tasksWithAssignments = tasksData.map(task => ({
+                    ...task,
+                    assignments: (assignmentsData || [])
+                        .filter(a => a.task_id === task.id)
+                        .map(a => ({
+                            user_id: a.user_id,
+                            assigned_at: a.assigned_at,
+                            user: profilesMap.get(a.user_id) || { username: 'Unknown', avatar_url: null }
+                        }))
+                }))
+
+                setTasks(tasksWithAssignments as Task[])
+            } else {
+                setTasks([])
+            }
 
         } catch (error) {
             console.error("Error fetching group:", error)

@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabaseClient"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -17,6 +16,7 @@ import { Trash2, Loader2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { deleteProject } from "@/app/actions/projects"
 
 interface DeleteProjectDialogProps {
     projectId: string
@@ -34,23 +34,22 @@ export function DeleteProjectDialog({ projectId, projectTitle }: DeleteProjectDi
 
         setIsLoading(true)
         try {
-            const { error } = await supabase
-                .from('projects')
-                .delete()
-                .eq('id', projectId)
+            const result = await deleteProject(projectId)
 
-            if (error) throw error
+            if (!result.success) {
+                toast.error('Error al eliminar proyecto', {
+                    description: result.error,
+                })
+                return
+            }
 
-            toast.success("Project deleted successfully")
+            toast.success('Proyecto eliminado exitosamente')
             setOpen(false)
-            // Force a hard refresh to ensure the dashboard data is re-fetched and cache is cleared
-            window.location.href = '/dashboard'
-
-        } catch (error: any) {
-            toast.error("Failed to delete project", {
-                description: error.message
-            })
-            console.error(error)
+            router.push('/dashboard')
+            router.refresh()
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado al eliminar el proyecto')
         } finally {
             setIsLoading(false)
         }

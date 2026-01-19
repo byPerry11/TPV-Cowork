@@ -32,10 +32,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { supabase } from "@/lib/supabaseClient"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { UserMultiSelect } from "@/components/user-multi-select"
-import { getRandomMemberColor } from "@/lib/utils"
+import { inviteMemberToProject, removeMemberFromProject } from "@/app/actions/members"
+import { supabase } from "@/lib/supabaseClient"
 
 const memberSchema = z.object({
     username: z.string().min(3, "Select a user to add"),
@@ -131,79 +131,38 @@ export function ManageMembersDialog({ projectId }: ManageMembersDialogProps) {
     async function onSubmit(values: z.infer<typeof memberSchema>) {
         setAdding(true)
         try {
-            let targetUserId = selectedUserId
-
-            if (!targetUserId) {
-                // Find User by Username only (since profiles table doesn't have email searchable for privacy/RLS)
-                const query = values.username.trim()
-
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('id')
-                    .eq('username', query) // Exact match for username
-                    .maybeSingle()
-
-                if (profileError || !profile) {
-                    toast.error("User not found", {
-                        description: "No user found with that username."
-                    })
-                    return
-                }
-                targetUserId = profile.id
-            }
-
-            if (!targetUserId) return
-
-            // 2. Check if already member
-            const existing = members.find(m => m.user_id === targetUserId)
-            if (existing) {
-                toast.error("User is already a member")
+            if (!selectedUserId) {
+                toast.error('Selecciona un usuario')
                 return
             }
 
-            // 3. Add to project_members (with pending status if implementing notifications later, 
-            // but for now keeping it simple or setting to 'active' if not yet implementing invitations fully in this step.
-            // Requirement says "Add friend returns User Not Found". Let's fix that first.
-            // We will add 'status' in the next step of the plan. For now, basic insert.)
-            const { error: insertError } = await supabase
-                .from('project_members')
-                .insert({
-                    project_id: projectId,
-                    user_id: targetUserId,
-                    role: values.role,
-                    status: 'pending', // Invites start as pending
-                    member_color: getRandomMemberColor()
-                })
+            // Check if already member
+            const existing = members.find(m => m.user_id === selectedUserId)
+            if (existing) {
+                toast.error('El usuario ya es miembro')
+                return
+            }
 
-            if (insertError) throw insertError
-
-            // Send Notification
-            const { data: projData } = await supabase
-                .from('projects')
-                .select('title')
-                .eq('id', projectId)
-                .single()
-            
-            const projectTitle = projData?.title || 'a project'
-
-            await supabase.from('notifications').insert({
-                user_id: targetUserId,
-                type: 'project_invite',
-                title: 'Project Invitation',
-                message: `You have been invited to join ${projectTitle}`,
-                reference_id: projectId
+            const result = await inviteMemberToProject({
+                project_id: projectId,
+                user_id: selectedUserId,
+                role: values.role,
             })
 
-            toast.success("Invitación enviada correctamente")
+            if (!result.success) {
+                toast.error('Error al invitar miembro', {
+                    description: result.error,
+                })
+                return
+            }
+
+            toast.success('Invitación enviada correctamente')
             form.reset()
             setSelectedUserId(null)
             fetchMembers()
-
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (error: any) {
-            toast.error("Failed to add member", {
-                description: error.message
-            })
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         } finally {
             setAdding(false)
         }
@@ -211,19 +170,23 @@ export function ManageMembersDialog({ projectId }: ManageMembersDialogProps) {
 
     const removeMember = async (userId: string) => {
         try {
-            const { error } = await supabase
-                .from('project_members')
-                .delete()
-                .eq('project_id', projectId)
-                .eq('user_id', userId)
+            const result = await removeMemberFromProject({
+                project_id: projectId,
+                user_id: userId,
+            })
 
-            if (error) throw error
+            if (!result.success) {
+                toast.error('Error al remover miembro', {
+                    description: result.error,
+                })
+                return
+            }
 
-            toast.success("Member removed successfully")
+            toast.success('Miembro removido exitosamente')
             setMembers(prev => prev.filter(m => m.user_id !== userId))
         } catch (error) {
-            console.error("Error removing member:", error)
-            toast.error("Failed to remove member")
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         }
     }
 

@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabaseClient"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { LogOut, Loader2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
+import { leaveProject } from "@/app/actions/members"
 
 interface LeaveProjectDialogProps {
     projectId: string
@@ -29,30 +29,22 @@ export function LeaveProjectDialog({ projectId, projectTitle }: LeaveProjectDial
     const handleLeaveProject = async () => {
         setIsLoading(true)
         try {
-            const { data: { session } } = await supabase.auth.getSession()
-            if (!session) return
+            const result = await leaveProject({ project_id: projectId })
 
-            // Delete the member record to remove them completely from the project
-            const { error } = await supabase
-                .from('project_members')
-                .delete()
-                .eq('project_id', projectId)
-                .eq('user_id', session.user.id)
+            if (!result.success) {
+                toast.error('Error al salir del proyecto', {
+                    description: result.error,
+                })
+                return
+            }
 
-            if (error) throw error
-
-            toast.success(`You have left ${projectTitle}`)
+            toast.success(`Has salido de ${projectTitle}`)
             setOpen(false)
             router.push('/dashboard')
             router.refresh()
-
-            // Here you would add the notification logic to admins
-            // For now we'll just log it
-
-
-        } catch (error: any) {
-            toast.error("Failed to leave project")
-            console.error(error)
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado al salir del proyecto')
         } finally {
             setIsLoading(false)
         }

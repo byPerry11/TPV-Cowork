@@ -31,9 +31,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { supabase } from "@/lib/supabaseClient"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { UserMultiSelect } from "@/components/user-multi-select"
+import { inviteMemberToGroup, removeMemberFromGroup } from "@/app/actions/members"
+import { supabase } from "@/lib/supabaseClient"
 
 const memberSchema = z.object({
     username: z.string().min(1, "Select a user to add"),
@@ -130,42 +131,39 @@ export function ManageGroupMembersDialog({ groupId, onMemberAdded }: ManageGroup
     async function onSubmit(values: z.infer<typeof memberSchema>) {
         setAdding(true)
         try {
-            let targetUserId = selectedUserId
-
-            if (!targetUserId) {
-                // Fallback if not selected via UI but typeahead found exact match - unlikely with this component but good safety
-                // For now rely on selectedUserId
-                return;
-            }
-
-            // 2. Check if already member
-            const existing = members.find(m => m.user_id === targetUserId)
-            if (existing) {
-                toast.error("User is already a member")
+            if (!selectedUserId) {
+                toast.error('Selecciona un usuario')
                 return
             }
 
-            // 3. Add to work_group_members
-            const { error: insertError } = await supabase
-                .from('work_group_members')
-                .insert({
-                    work_group_id: groupId,
-                    user_id: targetUserId,
-                    role: values.role,
+            // Check if already member
+            const existing = members.find(m => m.user_id === selectedUserId)
+            if (existing) {
+                toast.error('El usuario ya es miembro')
+                return
+            }
+
+            const result = await inviteMemberToGroup({
+                group_id: groupId,
+                user_id: selectedUserId,
+                role: values.role,
+            })
+
+            if (!result.success) {
+                toast.error('Error al añadir miembro', {
+                    description: result.error,
                 })
+                return
+            }
 
-            if (insertError) throw insertError
-
-            toast.success("Member added successfully")
+            toast.success('Miembro añadido exitosamente')
             form.reset()
             setSelectedUserId(null)
             fetchMembers()
             onMemberAdded?.()
-
-        } catch (error: any) {
-            toast.error("Failed to add member", {
-                description: error.message
-            })
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         } finally {
             setAdding(false)
         }
@@ -173,20 +171,24 @@ export function ManageGroupMembersDialog({ groupId, onMemberAdded }: ManageGroup
 
     const removeMember = async (userId: string) => {
         try {
-            const { error } = await supabase
-                .from('work_group_members')
-                .delete()
-                .eq('work_group_id', groupId)
-                .eq('user_id', userId)
+            const result = await removeMemberFromGroup({
+                group_id: groupId,
+                user_id: userId,
+            })
 
-            if (error) throw error
+            if (!result.success) {
+                toast.error('Error al remover miembro', {
+                    description: result.error,
+                })
+                return
+            }
 
-            toast.success("Member removed successfully")
+            toast.success('Miembro removido exitosamente')
             setMembers(prev => prev.filter(m => m.user_id !== userId))
             onMemberAdded?.()
         } catch (error) {
-            console.error("Error removing member:", error)
-            toast.error("Failed to remove member")
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         }
     }
 

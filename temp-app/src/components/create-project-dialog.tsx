@@ -39,13 +39,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn, getRandomMemberColor } from "@/lib/utils"
-import { supabase } from "@/lib/supabaseClient"
+import { cn } from "@/lib/utils"
 import { ColorPicker } from "@/components/color-picker"
 import { EmojiPicker } from "@/components/emoji-picker"
 import { UserMultiSelect } from "@/components/user-multi-select"
 import { ENGINEERING_CATEGORIES } from "@/lib/project-constants"
-import { checkAchievementsAndNotify } from "@/lib/achievements"
+import { createProject } from "@/app/actions/projects"
 
 const projectSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -87,78 +86,35 @@ export function CreateProjectDialog({ onSuccess, workGroupId }: CreateProjectDia
   async function onSubmit(values: z.infer<typeof projectSchema>) {
     setIsLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      const result = await createProject({
+        title: values.title,
+        category: values.category,
+        description: values.description,
+        color: values.color,
+        project_icon: values.project_icon,
+        start_date: values.start_date.toISOString(),
+        end_date: values.end_date ? values.end_date.toISOString() : undefined,
+        max_users: values.max_users,
+        is_public: values.is_public,
+        work_group_id: workGroupId,
+        invited_users: invitedUsers,
+      })
 
-      // Create project and get the created project data
-      const { data: projectData, error: projectError } = await supabase
-        .from('projects')
-        .insert({
-          title: values.title,
-          category: values.category,
-          description: values.description || null,
-          color: values.color,
-          project_icon: values.project_icon,
-          owner_id: session.user.id,
-          work_group_id: workGroupId || null, // Add work_group_id
-          start_date: values.start_date.toISOString(),
-          end_date: values.end_date ? values.end_date.toISOString() : null,
-          max_users: values.max_users,
-          is_public: values.is_public,
-          status: 'active'
+      if (!result.success) {
+        toast.error('Error al crear proyecto', {
+          description: result.error,
         })
-        .select()
-        .single()
-
-      if (projectError) throw projectError
-
-      // Add owner as admin member of the project
-      const { error: memberError } = await supabase
-        .from('project_members')
-        .insert({
-          project_id: projectData.id,
-          user_id: session.user.id,
-          role: 'admin',
-          status: 'active', // Owner is active by default
-          member_color: getRandomMemberColor()
-        })
-
-      if (memberError) throw memberError
-
-      // Add invited members (pending status)
-      if (invitedUsers.length > 0) {
-        const invitations = invitedUsers.map(uid => ({
-          project_id: projectData.id,
-          user_id: uid,
-          role: 'member',
-          status: 'pending',
-          member_color: getRandomMemberColor()
-        }))
-
-        const { error: inviteError } = await supabase
-          .from('project_members')
-          .insert(invitations)
-
-        if (inviteError) {
-          console.error("Error inviting users:", inviteError)
-          toast.error("Proyecto creado, pero fallaron algunas invitaciones")
-        }
+        return
       }
 
-      toast.success("Proyecto creado exitosamente")
-
-      // Check and unlock achievements for project creation
-      await checkAchievementsAndNotify(session.user.id, 'project_created')
-
+      toast.success('Proyecto creado exitosamente')
       setOpen(false)
       form.reset()
-      setInvitedUsers([]) // Reset invitations
+      setInvitedUsers([])
       onSuccess()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      toast.error("Error al crear proyecto", {
-        description: error.message
-      })
+    } catch (error) {
+      console.error('Unexpected error:', error)
+      toast.error('Error inesperado al crear el proyecto')
     } finally {
       setIsLoading(false)
     }

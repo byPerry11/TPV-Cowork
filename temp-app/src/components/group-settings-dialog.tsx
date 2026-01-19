@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabaseClient"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -50,6 +49,8 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { WorkGroup, WorkGroupMember } from "@/types"
+import { updateGroup, transferGroupOwnership, deleteGroup } from "@/app/actions/groups"
+import { removeMemberFromGroup } from "@/app/actions/members"
 
 interface GroupSettingsDialogProps {
     group: WorkGroup
@@ -97,20 +98,24 @@ export function GroupSettingsDialog({
     const handleSaveGeneral = async () => {
         setIsLoading(true)
         try {
-            const { error } = await supabase
-                .from('work_groups')
-                .update({
-                    name,
-                    description,
+            const result = await updateGroup({
+                group_id: group.id,
+                name,
+                description,
+            })
+
+            if (!result.success) {
+                toast.error('Error al actualizar grupo', {
+                    description: result.error,
                 })
-                .eq('id', group.id)
+                return
+            }
 
-            if (error) throw error
-
-            toast.success("Group updated successfully")
+            toast.success('Grupo actualizado exitosamente')
             onGroupUpdate?.()
-        } catch (error: any) {
-            toast.error("Failed to update group", { description: error.message })
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         } finally {
             setIsLoading(false)
         }
@@ -120,19 +125,24 @@ export function GroupSettingsDialog({
     const handleKickMember = async (userId: string) => {
         setIsLoading(true)
         try {
-            const { error } = await supabase
-                .from('work_group_members')
-                .delete()
-                .eq('work_group_id', group.id)
-                .eq('user_id', userId)
+            const result = await removeMemberFromGroup({
+                group_id: group.id,
+                user_id: userId,
+            })
 
-            if (error) throw error
+            if (!result.success) {
+                toast.error('Error al remover miembro', {
+                    description: result.error,
+                })
+                return
+            }
 
-            toast.success("Member removed from group")
+            toast.success('Miembro removido del grupo')
             setKickMemberId(null)
             onGroupUpdate?.()
-        } catch (error: any) {
-            toast.error("Failed to remove member", { description: error.message })
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         } finally {
             setIsLoading(false)
         }
@@ -144,39 +154,25 @@ export function GroupSettingsDialog({
 
         setIsLoading(true)
         try {
-            // Update the group owner
-            const { error: groupError } = await supabase
-                .from('work_groups')
-                .update({ owner_id: transferToUserId })
-                .eq('id', group.id)
+            const result = await transferGroupOwnership({
+                group_id: group.id,
+                new_owner_id: transferToUserId,
+            })
 
-            if (groupError) throw groupError
-
-            // Update roles: new owner becomes admin, old owner becomes member (or stays admin?)
-            // Let's make old owner admin, new owner admin
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                // Update new owner to admin
-                await supabase
-                    .from('work_group_members')
-                    .update({ role: 'admin' })
-                    .eq('work_group_id', group.id)
-                    .eq('user_id', transferToUserId)
-
-                // Update old owner (me) - stay admin or demote? Usually demote to member or admin. Owner -> Admin seems safe.
-                await supabase
-                    .from('work_group_members')
-                    .update({ role: 'admin' })
-                    .eq('work_group_id', group.id)
-                    .eq('user_id', user.id)
+            if (!result.success) {
+                toast.error('Error al transferir propiedad', {
+                    description: result.error,
+                })
+                return
             }
 
-            toast.success("Ownership transferred successfully")
+            toast.success('Propiedad transferida exitosamente')
             setShowTransferConfirm(false)
             setOpen(false)
             onGroupUpdate?.()
-        } catch (error: any) {
-            toast.error("Failed to transfer ownership", { description: error.message })
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         } finally {
             setIsLoading(false)
         }
@@ -188,18 +184,22 @@ export function GroupSettingsDialog({
 
         setIsLoading(true)
         try {
-            const { error } = await supabase
-                .from('work_groups')
-                .delete()
-                .eq('id', group.id)
+            const result = await deleteGroup(group.id)
 
-            if (error) throw error
+            if (!result.success) {
+                toast.error('Error al eliminar grupo', {
+                    description: result.error,
+                })
+                return
+            }
 
-            toast.success("Group deleted successfully")
+            toast.success('Grupo eliminado exitosamente')
             setOpen(false)
             router.push('/dashboard')
-        } catch (error: any) {
-            toast.error("Failed to delete group", { description: error.message })
+            router.refresh()
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         } finally {
             setIsLoading(false)
         }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabaseClient"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -54,6 +53,8 @@ import {
 import { toast } from "sonner"
 import { Project } from "@/types"
 import { ENGINEERING_CATEGORIES } from "@/lib/project-constants"
+import { updateProject, updateProjectVisibility, deleteProject, transferProjectOwnership } from "@/app/actions/projects"
+import { removeMemberFromProject } from "@/app/actions/members"
 
 interface Member {
     user_id: string
@@ -118,22 +119,25 @@ export function ProjectSettingsDialog({
     const handleSaveGeneral = async () => {
         setIsLoading(true)
         try {
-            const { error } = await supabase
-                .from('projects')
-                .update({
-                    title,
-                    description,
-                    category,
-                    project_icon: projectIcon,
+            const result = await updateProject({
+                project_id: project.id,
+                title,
+                description,
+                project_icon: projectIcon,
+            })
+
+            if (!result.success) {
+                toast.error('Error al actualizar proyecto', {
+                    description: result.error,
                 })
-                .eq('id', project.id)
+                return
+            }
 
-            if (error) throw error
-
-            toast.success("Project updated successfully")
+            toast.success('Proyecto actualizado exitosamente')
             onProjectUpdate?.()
-        } catch (error: any) {
-            toast.error("Failed to update project", { description: error.message })
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado al actualizar el proyecto')
         } finally {
             setIsLoading(false)
         }
@@ -144,18 +148,24 @@ export function ProjectSettingsDialog({
         setIsLoading(true)
         try {
             const newVisibility = !isPublic
-            const { error } = await supabase
-                .from('projects')
-                .update({ is_public: newVisibility })
-                .eq('id', project.id)
+            const result = await updateProjectVisibility({
+                project_id: project.id,
+                is_public: newVisibility,
+            })
 
-            if (error) throw error
+            if (!result.success) {
+                toast.error('Error al cambiar visibilidad', {
+                    description: result.error,
+                })
+                return
+            }
 
             setIsPublic(newVisibility)
-            toast.success(newVisibility ? "Project is now public" : "Project is now private")
+            toast.success(newVisibility ? 'Proyecto ahora es público' : 'Proyecto ahora es privado')
             onProjectUpdate?.()
-        } catch (error: any) {
-            toast.error("Failed to update visibility", { description: error.message })
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         } finally {
             setIsLoading(false)
         }
@@ -165,19 +175,24 @@ export function ProjectSettingsDialog({
     const handleKickMember = async (userId: string) => {
         setIsLoading(true)
         try {
-            const { error } = await supabase
-                .from('project_members')
-                .update({ status: 'left' })
-                .eq('project_id', project.id)
-                .eq('user_id', userId)
+            const result = await removeMemberFromProject({
+                project_id: project.id,
+                user_id: userId,
+            })
 
-            if (error) throw error
+            if (!result.success) {
+                toast.error('Error al remover miembro', {
+                    description: result.error,
+                })
+                return
+            }
 
-            toast.success("Member removed from project")
+            toast.success('Miembro removido del proyecto')
             setKickMemberId(null)
             onProjectUpdate?.()
-        } catch (error: any) {
-            toast.error("Failed to remove member", { description: error.message })
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         } finally {
             setIsLoading(false)
         }
@@ -189,38 +204,25 @@ export function ProjectSettingsDialog({
 
         setIsLoading(true)
         try {
-            // Update the project owner
-            const { error: projectError } = await supabase
-                .from('projects')
-                .update({ owner_id: transferToUserId })
-                .eq('id', project.id)
+            const result = await transferProjectOwnership({
+                project_id: project.id,
+                new_owner_id: transferToUserId,
+            })
 
-            if (projectError) throw projectError
-
-            // Update roles: new owner becomes admin, old owner becomes member
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                // Update new owner to admin
-                await supabase
-                    .from('project_members')
-                    .update({ role: 'admin' })
-                    .eq('project_id', project.id)
-                    .eq('user_id', transferToUserId)
-
-                // Update old owner to member
-                await supabase
-                    .from('project_members')
-                    .update({ role: 'member' })
-                    .eq('project_id', project.id)
-                    .eq('user_id', user.id)
+            if (!result.success) {
+                toast.error('Error al transferir propiedad', {
+                    description: result.error,
+                })
+                return
             }
 
-            toast.success("Ownership transferred successfully")
+            toast.success('Propiedad transferida exitosamente')
             setShowTransferConfirm(false)
             setOpen(false)
             onProjectUpdate?.()
-        } catch (error: any) {
-            toast.error("Failed to transfer ownership", { description: error.message })
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         } finally {
             setIsLoading(false)
         }
@@ -232,18 +234,22 @@ export function ProjectSettingsDialog({
 
         setIsLoading(true)
         try {
-            const { error } = await supabase
-                .from('projects')
-                .delete()
-                .eq('id', project.id)
+            const result = await deleteProject(project.id)
 
-            if (error) throw error
+            if (!result.success) {
+                toast.error('Error al eliminar proyecto', {
+                    description: result.error,
+                })
+                return
+            }
 
-            toast.success("Project deleted successfully")
+            toast.success('Proyecto eliminado exitosamente')
             setOpen(false)
-            window.location.href = '/dashboard'
-        } catch (error: any) {
-            toast.error("Failed to delete project", { description: error.message })
+            router.push('/dashboard')
+            router.refresh()
+        } catch (error) {
+            console.error('Unexpected error:', error)
+            toast.error('Error inesperado')
         } finally {
             setIsLoading(false)
         }
